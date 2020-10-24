@@ -1,4 +1,4 @@
-# IMGUP
+# IMGO
 
 ## Compile, Process, and Augment Image Data
 
@@ -6,7 +6,7 @@ This library is designed to facilitate the preprocessing phase of image classifi
 
 ### Features:
 
-Imgup is composed of two distinct but related modules: **Uptools** and **Augtools**.
+Imgo is composed of two distinct but related modules: **Uptools** and **Augtools**.
 
 **Uptools** helps to streamline various image data preprocessing tasks, such as:
 
@@ -26,17 +26,17 @@ Imgup is composed of two distinct but related modules: **Uptools** and **Augtool
  - Augment entire image datasets
  - Augment training data in place in preparation for machine learning projects
  
-Here is a sample image augmented using Imgup:
+Here is a sample image augmented using Imgo:
 
-![imgup_aug_demo](aux/imgup_aug_demo.jpg)
+![imgo_aug_demo](aux/imgo_aug_demo.jpg)
 
 ### Installation
 
-It's as easy as `pip install imgup`!
+It's as easy as `pip install imgo`!
 
 ### Quickstart
 
-Have a look at the demos [here](https://github.com/elbydata/imgup/tree/master/demos)!
+Have a look at the demos [here](https://github.com/elbydata/imgo/tree/master/demos)!
 
 ### Documentation
 
@@ -48,7 +48,7 @@ Please see the `requirements.txt` file for all requirements and dependencies.
  
 ### Support
 
-The source code is available [here](https://github.com/elbydata/imgup/tree/master/imgup).
+The source code is available [here](https://github.com/elbydata/imgo/tree/master/imgo).
 Please direct any queries or issues to info@elbydata.com.
 
 ### License

@@ -1,5 +1,5 @@
 """
-IMGUP - Compile, process, and augment image data.
+IMGO - Compile, process, and augment image data.
 -------------------------------------------------
 AUGTOOLS module: 
 
@@ -814,14 +814,14 @@ class Augmenter:
             is drawn. Can either be "path" or "ids". If "path", the
             source argument will be taken as the path to the directory
             containing the images. If "ids", the source argument will
-            be taken as the name of an (initialized) imgup.utpools
+            be taken as the name of an (initialized) imgo.utpools
             Image_Dataset object.
             -
             source (str or Image_Dataset object): source of the images
             from which the sample is drawn. Can either be the base path
             to the directory containing images (or class subdirectories)
             if the source_type argument is given as "path", or an
-            (initialized) imgup.uptools Image_Dataset object if the
+            (initialized) imgo.uptools Image_Dataset object if the
             source_type argument is given as "ids".
             -
             n_rows (int): number of rows of augmented images to
@@ -847,7 +847,7 @@ class Augmenter:
 
         if source_type == "path":
 
-            from imgup.uptools import img_to_df
+            from imgo.uptools import img_to_df
 
             df = img_to_df(source)
             sample = df.sample()
@@ -955,8 +955,8 @@ class Augmenter:
             (if save is False).
         """
 
-        from imgup.uptools import img_to_df
-        from imgup.uptools import read_img_df
+        from imgo.uptools import img_to_df
+        from imgo.uptools import read_img_df
 
         all_class_arrays = []
         all_aug_indices = []

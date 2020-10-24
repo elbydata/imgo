@@ -1,5 +1,5 @@
 """
-IMGUP - Compile, process, and augment image data.
+IMGO - Compile, process, and augment image data.
 -------------------------------------------------
 UPTOOLS module: 
 
@@ -29,7 +29,7 @@ Image_Dataset: Class representing an image dataset.
         subdirectories for each class.
         -
         augment_training_set: calls on an (initialized) 
-        imgup.augtools augmenter to apply image augmentation 
+        imgo.augtools augmenter to apply image augmentation 
         to the Image_Dataset's X_train subset.
                
         
@@ -484,7 +484,7 @@ class Image_Dataset:
     save_as_imgdirs: saves dataset into main directory and subdirectories
     for each class.
     -
-    augment_training_set: calls on an (initialized) imgup.augtools
+    augment_training_set: calls on an (initialized) imgo.augtools
     augmenter to apply image augmentation to the Image_Dataset's X_train
     subset.
     """
@@ -1416,11 +1416,11 @@ class Image_Dataset:
     def augment_training_set(self, augmenter, portion, inplace=False):
 
         """
-        Calls on an (initialized) imgup.augtools augmenter to apply image
+        Calls on an (initialized) imgo.augtools augmenter to apply image
         augmentation to the Image_Dataset's X_train subset.
 
         Arguments:
-            augmenter (imgup.uptoorls Augmenter object): the augmenter to
+            augmenter (imgo.uptools Augmenter object): the augmenter to
             apply to the images.
             -
             portion (float): float within the range [0,1]. This is the
@@ -1438,7 +1438,7 @@ class Image_Dataset:
             with augmented images (if inplace argument set to False).
         """
 
-        from imgup import augtools
+        from imgo import augtools
 
         if self.split == True:
 

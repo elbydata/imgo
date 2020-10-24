@@ -4,14 +4,14 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="imgup",
+    name="imgo",
     version="1.0.0",
     author="Elby Data",
     author_email="info@elbydata.com",
     description="Image data processing and augmentation",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/elbydata/pyfer",
+    url="https://github.com/elbydata/imgo",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
