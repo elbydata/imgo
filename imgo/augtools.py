@@ -3,7 +3,7 @@ IMGO - Compile, process, and augment image data.
 -------------------------------------------------
 AUGTOOLS module: 
 
-Last updated: version 4.1.1
+Last updated: version 1.0.2
 
 Classes
 -------        
@@ -59,7 +59,6 @@ import random
 import imageio
 import cv2
 import matplotlib.pyplot as plt
-import imageio
 from imgaug import augmenters as iaa
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
@@ -606,19 +605,27 @@ class Augmenter:
         """
 
         if self.g_sev is not None:
+            rand_sev = np.random.randint(self.g_sev + 1)
             if self.randomize_batch == True:
-                sev = np.random.randint(1, self.g_sev + 1)
-                g_noise = iaa.imgcorruptlike.GaussianNoise(severity=sev)
+                if rand_sev == 0:
+                    g_noise = None
+                else:
+                    g_noise = iaa.imgcorruptlike.GaussianNoise(
+                        severity=rand_sev
+                    )
             else:
                 g_noise = iaa.imgcorruptlike.GaussianNoise(
                     severity=self.g_sev
                 )
-            if prenorm:
-                img = (img * 255).astype(np.uint8)
-                g_noise_img = (g_noise(image=img)) / 255
+            if g_noise is None:
+                return img
             else:
-                g_noise_img = g_noise(image=img)
-            return g_noise_img
+                if prenorm:
+                    img = (img * 255).astype(np.uint8)
+                    g_noise_img = (g_noise(image=img)) / 255
+                else:
+                    g_noise_img = g_noise(image=img)
+                return g_noise_img
         else:
             return img
 
@@ -632,19 +639,27 @@ class Augmenter:
         """
 
         if self.b_sev is not None:
+            rand_sev = np.random.randint(self.b_sev + 1)
             if self.randomize_batch == True:
-                sev = np.random.randint(1, self.b_sev + 1)
-                brightness = iaa.imgcorruptlike.Brightness(severity=sev)
+                if rand_sev == 0:
+                    brightness = None
+                else:
+                    brightness = iaa.imgcorruptlike.Brightness(
+                        severity=rand_sev
+                    )
             else:
                 brightness = iaa.imgcorruptlike.Brightness(
                     severity=self.b_sev
                 )
-            if prenorm:
-                img = (img * 255).astype(np.uint8)
-                brightness_img = (brightness(image=img)) / 255
+            if brightness is None:
+                return img
             else:
-                brightness_img = brightness(image=img)
-            return brightness_img
+                if prenorm:
+                    img = (img * 255).astype(np.uint8)
+                    brightness_img = (brightness(image=img)) / 255
+                else:
+                    brightness_img = brightness(image=img)
+                return brightness_img
         else:
             return img
 
@@ -658,21 +673,27 @@ class Augmenter:
         """
 
         if self.e_sev is not None:
+            rand_sev = np.random.randint(self.e_sev + 1)
             if self.randomize_batch == True:
-                sev = np.random.randint(1, self.e_sev + 1)
-                elastic = iaa.imgcorruptlike.ElasticTransform(
-                    severity=sev
-                )
+                if rand_sev == 0:
+                    elastic = None
+                else:
+                    elastic = iaa.imgcorruptlike.ElasticTransform(
+                        severity=rand_sev
+                    )
             else:
                 elastic = iaa.imgcorruptlike.ElasticTransform(
                     severity=self.e_sev
                 )
-            if prenorm:
-                img = (img * 255).astype(np.uint8)
-                elastic_img = (elastic(image=img)) / 255
+            if elastic is None:
+                return img
             else:
-                elastic_img = elastic(image=img)
-            return elastic_img
+                if prenorm:
+                    img = (img * 255).astype(np.uint8)
+                    elastic_img = (elastic(image=img)) / 255
+                else:
+                    elastic_img = elastic(image=img)
+                return elastic_img
         else:
             return img
 

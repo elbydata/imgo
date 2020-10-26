@@ -3,7 +3,7 @@ IMGO - Compile, process, and augment image data.
 -------------------------------------------------
 UPTOOLS module: 
 
-Last updated: version 4.1.1
+Last updated: version 1.0.2
 
 Classes
 -------
@@ -436,8 +436,11 @@ class Image_Dataset:
     df (pandas-DataFrame) optional/dependent on init: dataset as pandas-
     DataFrame if in image directory form.
     -
-    split (bool) optional/dependent on tvt_split: whether or not the data-
-    set has been split into train/val/testing subsets.
+    split (int) optional/dependent on tvt_split: whether or not the data-
+    set has been split into train/val/testing subsets. If 0, the data has
+    not been split. If 1, the data has been split into training and testing
+    subsets. If 2, the data has been split into training, validation, and
+    testing subsets.
     -
     X_train (numpy-array) optional/dependent on tvt_split: training image
     data arrays if split using tvt_split.
@@ -457,10 +460,10 @@ class Image_Dataset:
     y_test (numpy-array) optional/dependent on tvt_split: testing label
     data arrays if split using tvt_split.
     -
-    train_dict (dict) optional/dependent on tvt_split: names and arrays
+    train_subsets (dict) optional/dependent on tvt_split: names and arrays
     of training and validation data if split using tvt_split.
     -
-    test_dict (dict) optional/dependent on tvt_split: names and arrays of
+    test_subsets (dict) optional/dependent on tvt_split: names and arrays of
     testing data if split using tvt_split.
 
 
@@ -539,7 +542,7 @@ class Image_Dataset:
             Image_Dataset object.
         """
 
-        self.split = False
+        self.split = 0
         self.base_path = base_path
 
         if resize is None:
@@ -937,14 +940,13 @@ class Image_Dataset:
 
     #     ----------
 
-    def tvt_split(
+    def tt_split(
         self, splits, seed=None, stratify=False, standardize=False
     ):
 
         """
-        Splits the Image_Dataset object into training, validation, and
-        testing subsets. Whether or not to include a validation split is
-        inferred by the number of elements in the splits argument.
+        Splits the Image_Dataset object into training and testing
+        subsets.
 
         Note that this method is built using Scikit-Learn's
         train_test_split. For more information see:
@@ -952,10 +954,119 @@ class Image_Dataset:
 
         Arguments:
             splits (list or tuple): ratios used to split the dataset.
-            The total must sum to 1. If the argument consists of 2
-            elements, the dataset will be split into training and testing
-            subsets. If the argument consists of 3 elements, the dataset
-            will be split into training, validation, and testing subsets.
+            Must contain 2 float values and total must sum to 1.
+
+        Keyword Arguments:
+            seed (int) optional: random seed for use in the data split.
+            Defaults to None.
+            -
+            stratify (bool) optional: whether or not to preserve the class
+            balances that exist in the un-split data. Defaults to False.
+            -
+            standardize (bool) optional: whether or not to standardize
+            the pixel values in the training and testing sets using the
+            mean and standard deviation of the training data. Defaults
+            to False.
+
+        Returns:
+            X_train, X_test, y_train, y_test (numpy-array): training and
+            testing subsets as attributes.
+        """
+
+        self.X_val = None
+        self.y_val = None
+
+        if self.resize is None:
+            raise Exception("Data must be resized in order to split.")
+
+        if ((type(splits) is tuple) or (type(splits) is list)) and sum(
+            splits
+        ) == 1:
+
+            if len(splits) == 2:
+                self.split = 1
+                if stratify:
+                    (Xtr, Xt, ytr, yt) = train_test_split(
+                        self.X_data,
+                        self.y_data,
+                        test_size=splits[1],
+                        stratify=self.y_data,
+                        random_state=seed,
+                    )
+                else:
+                    (Xtr, Xt, ytr, yt) = train_test_split(
+                        self.X_data,
+                        self.y_data,
+                        test_size=splits[1],
+                        random_state=seed,
+                    )
+
+                self.y_train = ytr
+                self.y_test = yt
+
+            else:
+                raise Exception(
+                    "Splits argument must be list or tuple of 2 elements."
+                )
+
+            if standardize:
+                if self.resize is None:
+                    raise Exception(
+                        "Images must all have the same dimensions in"
+                        + " order to be standardized."
+                    )
+                else:
+                    self.split_std = True
+                    mu = np.mean(Xtr)
+                    sigma = np.std(Xtr)
+
+                    zXtr = (Xtr - mu) / sigma
+                    self.X_train = np.exp(zXtr) / (1 + np.exp(zXtr))
+
+                    zXt = (Xt - mu) / sigma
+                    self.X_test = np.exp(zXt) / (1 + np.exp(zXt))
+
+            else:
+                self.split_std = False
+                self.X_train = Xtr
+                self.X_test = Xt
+
+            self.train_subsets = {
+                "X_train": self.X_train,
+                "y_train": self.y_train,
+            }
+            self.test_subsets = {
+                "X_test": self.X_test,
+                "y_test": self.y_test,
+            }
+
+            print("X_train shape:", self.X_train.shape)
+            print("y_train shape:", self.y_train.shape)
+            print("X_test shape:", self.X_test.shape)
+            print("y_test shape:", self.y_test.shape)
+
+        else:
+            raise Exception(
+                "Splits argument must be list or tuple of 2 elements which sum to 1."
+            )
+
+    #     ----------
+
+    def tvt_split(
+        self, splits, seed=None, stratify=False, standardize=False
+    ):
+
+        """
+        Splits the Image_Dataset object into training, validation, and
+        testing subsets.
+
+        Note that this method is built using Scikit-Learn's
+        train_test_split. For more information see:
+        https://scikit-learn.org/stable/modules/classes.html#
+
+        Arguments:
+            splits (list or tuple): ratios used to split the dataset.
+            Must contain 3 float values and total must sum to 1.
 
         Keyword Arguments:
             seed (int) optional: random seed for use in the data split.
@@ -971,12 +1082,7 @@ class Image_Dataset:
 
         Returns:
             X_train, X_val, X_test, y_train, y_val, y_test (numpy-array):
-            training, validation, and testing subsets if 3 elements are
-            given in the split argument.
-            -
-            X_train, X_test, y_train, y_test (numpy-array):training and
-            testing subsets if 2 elements are given in the split
-            argument.
+            training, validation, and testing subsets as attributes.
         """
 
         if self.resize is None:
@@ -985,9 +1091,9 @@ class Image_Dataset:
         if ((type(splits) is tuple) or (type(splits) is list)) and sum(
             splits
         ) == 1:
+
             if len(splits) == 3:
-                self.split = True
-                val_set = True
+                self.split = 2
                 if stratify:
                     (Xtr, Xtv, ytr, ytv) = train_test_split(
                         self.X_data,
@@ -1019,38 +1125,16 @@ class Image_Dataset:
                         random_state=seed,
                     )
 
+                del Xtv
+                del ytv
+
                 self.y_train = ytr
                 self.y_val = yv
                 self.y_test = yt
 
-            elif len(splits) == 2:
-                self.split = True
-                val_set = False
-                if stratify:
-                    (Xtr, Xt, ytr, yt) = train_test_split(
-                        self.X_data,
-                        self.y_data,
-                        test_size=splits[1],
-                        stratify=self.y_data,
-                        random_state=seed,
-                    )
-                else:
-                    (Xtr, Xt, ytr, yt) = train_test_split(
-                        self.X_data,
-                        self.y_data,
-                        test_size=splits[1],
-                        random_state=seed,
-                    )
-
-                self.y_train = ytr
-                self.y_val = None
-                self.y_test = yt
-
             else:
-                self.split = False
                 raise Exception(
-                    "Splits argument must be list or tuple"
-                    + " of either 2 or 3 elements."
+                    "Splits argument must be list or tuple of 3 elements."
                 )
 
             if standardize:
@@ -1066,59 +1150,45 @@ class Image_Dataset:
 
                     zXtr = (Xtr - mu) / sigma
                     self.X_train = np.exp(zXtr) / (1 + np.exp(zXtr))
+
+                    zXv = (Xv - mu) / sigma
+                    self.X_val = np.exp(zXv) / (1 + np.exp(zXv))
+
                     zXt = (Xt - mu) / sigma
                     self.X_test = np.exp(zXt) / (1 + np.exp(zXt))
-
-                    if val_set == True:
-                        zXv = (Xv - mu) / sigma
-                        self.X_val = np.exp(zXv) / (1 + np.exp(zXv))
-                    else:
-                        self.X_val = None
 
             else:
                 self.split_std = False
                 self.X_train = Xtr
+                self.X_val = Xv
                 self.X_test = Xt
-                if val_set == True:
-                    self.X_val = Xv
-                else:
-                    self.X_val = None
 
-            print("X_train shape:", self.X_train.shape)
-            print("y_train shape:", self.y_train.shape)
-            if self.X_val is not None:
-                print("X_val shape:", self.X_val.shape)
-                print("y_val shape:", self.y_val.shape)
-                self.train_dict = {
-                    "X_train": self.X_train,
-                    "X_val": self.X_val,
-                    "y_train": self.y_train,
-                    "y_val": self.y_val,
-                }
-            else:
-                self.train_dict = {
-                    "X_train": self.X_train,
-                    "y_train": self.y_train,
-                }
-            print("X_test shape:", self.X_test.shape)
-            print("y_test shape:", self.y_test.shape)
-
-            self.test_dict = {
+            self.train_subsets = {
+                "X_train": self.X_train,
+                "X_val": self.X_val,
+                "y_train": self.y_train,
+                "y_val": self.y_val,
+            }
+            self.test_subsets = {
                 "X_test": self.X_test,
                 "y_test": self.y_test,
             }
 
+            print("X_train shape:", self.X_train.shape)
+            print("y_train shape:", self.y_train.shape)
+            print("X_val shape:", self.X_val.shape)
+            print("y_val shape:", self.y_val.shape)
+            print("X_test shape:", self.X_test.shape)
+            print("y_test shape:", self.y_test.shape)
+
         else:
             raise Exception(
-                "Splits argument must be list or tuple"
-                + " of either 2 or 3 elements which sum to 1."
+                "Splits argument must be list or tuple of 3 elements which sum to 1."
             )
 
     #     ----------
 
-    def save_as_np(
-        self, save_path, save_mode, save_split=False, overwrite=False
-    ):
+    def save_as_np(self, save_path, save_split=False, overwrite=False):
 
         """
         Saves the Image_Dataset object as X and y numpy-arrays. Creates
@@ -1128,9 +1198,6 @@ class Image_Dataset:
         Arguments:
             save_path (str): path to directory in which the data is to
             be saved.
-            -
-            save_mode (str: 'npy' or 'npz') optional: whether to save
-            the data arrays in .npy or .npz format.
 
         Keyword Arguments:
             save_split (bool) optional: if the Image_Dataset object
@@ -1147,61 +1214,34 @@ class Image_Dataset:
             Successful save message.
         """
 
-        if save_mode not in ["npz", "npy"]:
-            raise Exception(
-                "Must select valid save mode:"
-                + ' either "npz" or "npy".'
-            )
-        else:
-            ext = save_mode
+        ext = "npz"
 
         if save_split:
-            if self.split == False:
+            if self.split == 0:
                 raise Exception("Data set has not been split.")
             else:
                 if os.path.exists(f"{save_path}/train_data"):
-                    if save_mode == "npz":
-                        if overwrite:
-                            send2trash(f"{save_path}/train_data")
-                            os.mkdir(f"{save_path}/train_data")
-                            for k, v in self.train_dict.items():
-                                np.savez(
-                                    f"{save_path}/train_data/{k}", v
-                                )
-                                print(
-                                    f"{k}.{ext} saved in {save_path}/train_data/"
-                                )
-                        else:
-                            for k, v in self.train_dict.items():
-                                np.savez(
-                                    f"{save_path}/train_data/{k}_"
-                                    + f"{str(datetime.now())[:19].replace(' ','_').replace('-','_').replace(':','_')}",
-                                    v,
-                                )
-                                print(
-                                    f"{k}.{ext} saved in {save_path}/train_data/"
-                                )
+                    if overwrite:
+                        send2trash(f"{save_path}/train_data")
+                        os.mkdir(f"{save_path}/train_data")
+                        for k, v in self.train_subsets.items():
+                            np.savez_compressed(
+                                f"{save_path}/train_data/{k}", v
+                            )
+                            print(
+                                f"{k}.{ext} saved in {save_path}/train_data/"
+                            )
                     else:
-                        if overwrite:
-                            send2trash(f"{save_path}/train_data")
-                            os.mkdir(f"{save_path}/train_data")
-                            for k, v in self.train_dict.items():
-                                np.save(
-                                    f"{save_path}/train_data/{k}", v
-                                )
-                                print(
-                                    f"{k}.{ext} saved in {save_path}/train_data/"
-                                )
-                        else:
-                            for k, v in self.train_dict.items():
-                                np.save(
-                                    f"{save_path}/train_data/{k}_"
-                                    + f"{str(datetime.now())[:19].replace(' ','_').replace('-','_').replace(':','_')}",
-                                    v,
-                                )
-                                print(
-                                    f"{k}.{ext} saved in {save_path}/train_data/"
-                                )
+                        for k, v in self.train_subsets.items():
+                            np.savez_compressed(
+                                f"{save_path}/train_data/{k}_"
+                                + f"{str(datetime.now())[:19].replace(' ','_').replace('-','_').replace(':','_')}",
+                                v,
+                            )
+                            print(
+                                f"{k}.{ext} saved in {save_path}/train_data/"
+                            )
+
                 else:
                     if os.path.exists(f"{save_path}"):
                         os.mkdir(f"{save_path}/train_data")
@@ -1209,60 +1249,36 @@ class Image_Dataset:
                         os.mkdir(f"{save_path}")
                         os.mkdir(f"{save_path}/train_data")
 
-                    if save_mode == "npz":
-                        for k, v in self.train_dict.items():
-                            np.savez(f"{save_path}/train_data/{k}", v)
-                            print(
-                                f"{k}.{ext} saved in {save_path}/train_data/"
-                            )
-                    else:
-                        for k, v in self.train_dict.items():
-                            np.save(f"{save_path}/train_data/{k}", v)
-                            print(
-                                f"{k}.{ext} saved in {save_path}/train_data/"
-                            )
+                    for k, v in self.train_subsets.items():
+                        np.savez_compressed(
+                            f"{save_path}/train_data/{k}", v
+                        )
+                        print(
+                            f"{k}.{ext} saved in {save_path}/train_data/"
+                        )
 
                 if os.path.exists(f"{save_path}/test_data"):
-                    if save_mode == "npz":
-                        if overwrite:
-                            send2trash(f"{save_path}/test_data")
-                            os.mkdir(f"{save_path}/test_data")
-                            for k, v in self.test_dict.items():
-                                np.savez(
-                                    f"{save_path}/test_data/{k}", v
-                                )
-                                print(
-                                    f"{k}.{ext} saved in {save_path}/test_data/"
-                                )
-                        else:
-                            for k, v in self.test_dict.items():
-                                np.savez(
-                                    f"{save_path}/test_data/{k}_"
-                                    + f"{str(datetime.now())[:19].replace(' ','_').replace('-','_').replace(':','_')}",
-                                    v,
-                                )
-                                print(
-                                    f"{k}.{ext} saved in {save_path}/test_data/"
-                                )
-                    if save_mode == "npy":
-                        if overwrite:
-                            send2trash(f"{save_path}/test_data")
-                            os.mkdir(f"{save_path}/test_data")
-                            for k, v in self.test_dict.items():
-                                np.save(f"{save_path}/test_data/{k}", v)
-                                print(
-                                    f"{k}.{ext} saved in {save_path}/test_data/"
-                                )
-                        else:
-                            for k, v in self.test_dict.items():
-                                np.save(
-                                    f"{save_path}/test_data/{k}_"
-                                    + f"{str(datetime.now())[:19].replace(' ','_').replace('-','_').replace(':','_')}",
-                                    v,
-                                )
-                                print(
-                                    f"{k}.{ext} saved in {save_path}/test_data/"
-                                )
+                    if overwrite:
+                        send2trash(f"{save_path}/test_data")
+                        os.mkdir(f"{save_path}/test_data")
+                        for k, v in self.test_subsets.items():
+                            np.savez_compressed(
+                                f"{save_path}/test_data/{k}", v
+                            )
+                            print(
+                                f"{k}.{ext} saved in {save_path}/test_data/"
+                            )
+                    else:
+                        for k, v in self.test_subsets.items():
+                            np.savez_compressed(
+                                f"{save_path}/test_data/{k}_"
+                                + f"{str(datetime.now())[:19].replace(' ','_').replace('-','_').replace(':','_')}",
+                                v,
+                            )
+                            print(
+                                f"{k}.{ext} saved in {save_path}/test_data/"
+                            )
+
                 else:
                     if os.path.exists(f"{save_path}"):
                         os.mkdir(f"{save_path}/test_data")
@@ -1270,18 +1286,13 @@ class Image_Dataset:
                         os.mkdir(f"{save_path}")
                         os.mkdir(f"{save_path}/test_data")
 
-                    if save_mode == "npz":
-                        for k, v in self.test_dict.items():
-                            np.savez(f"{save_path}/test_data/{k}", v)
-                            print(
-                                f"{k}.{ext} saved in {save_path}/test_data/"
-                            )
-                    else:
-                        for k, v in self.test_dict.items():
-                            np.save(f"{save_path}/test_data/{k}", v)
-                            print(
-                                f"{k}.{ext} saved in {save_path}/test_data/"
-                            )
+                    for k, v in self.test_subsets.items():
+                        np.savez_compressed(
+                            f"{save_path}/test_data/{k}", v
+                        )
+                        print(
+                            f"{k}.{ext} saved in {save_path}/test_data/"
+                        )
 
         else:
             if os.path.exists(f"{save_path}"):
@@ -1290,28 +1301,17 @@ class Image_Dataset:
                         send2trash(f"{save_path}/X_data")
                     if os.path.exists(f"{save_path}/y_data"):
                         send2trash(f"{save_path}/y_data")
-                if save_mode == "npz":
-                    np.savez(f"{save_path}/X_data", self.X_data)
-                    print(f"X_data.{ext} saved in {save_path}/")
-                    np.savez(f"{save_path}/y_data", self.y_data)
-                    print(f"y_data.{ext} saved in {save_path}/")
-                else:
-                    np.save(f"{save_path}/X_data", self.X_data)
-                    print(f"X_data.{ext} saved in {save_path}/")
-                    np.save(f"{save_path}/y_data", self.y_data)
-                    print(f"y_data.{ext} saved in {save_path}/")
+                np.savez_compressed(f"{save_path}/X_data", self.X_data)
+                print(f"X_data.{ext} saved in {save_path}/")
+                np.savez_compressed(f"{save_path}/y_data", self.y_data)
+                print(f"y_data.{ext} saved in {save_path}/")
+
             else:
                 os.mkdir(f"{save_path}")
-                if save_mode == "npz":
-                    np.savez(f"{save_path}/X_data", self.X_data)
-                    print(f"X_data.{ext} saved in {save_path}/")
-                    np.savez(f"{save_path}/y_data", self.y_data)
-                    print(f"y_data.{ext} saved in {save_path}/")
-                else:
-                    np.save(f"{save_path}/X_data", self.X_data)
-                    print(f"X_data.{ext} saved in {save_path}/")
-                    np.save(f"{save_path}/y_data", self.y_data)
-                    print(f"y_data.{ext} saved in {save_path}/")
+                np.savez_compressed(f"{save_path}/X_data", self.X_data)
+                print(f"X_data.{ext} saved in {save_path}/")
+                np.savez_compressed(f"{save_path}/y_data", self.y_data)
+                print(f"y_data.{ext} saved in {save_path}/")
 
     #     ----------
 
@@ -1440,7 +1440,7 @@ class Image_Dataset:
 
         from imgo import augtools
 
-        if self.split == True:
+        if self.split > 0:
 
             if (portion >= 0) and (portion <= 1):
                 n = np.round(self.X_train.shape[0] * (portion)).astype(
