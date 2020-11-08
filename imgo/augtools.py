@@ -120,6 +120,7 @@ from send2trash import send2trash
 
 # ------------------------------------------------------------------------
 
+
 class Augmenter:
 
     """
@@ -133,49 +134,49 @@ class Augmenter:
 
     Attributes
     ----------
-    rotate_range (list or tuple): range in degrees from which a random 
+    rotate_range (list or tuple): range in degrees from which a random
     rotation angle is drawn.
     -
-    shear_range (list or tuple): range in degrees from which a random 
+    shear_range (list or tuple): range in degrees from which a random
     shear angle is drawn.
     -
-    dropout_pair (list or tuple): amount and degree of random pixel 
+    dropout_pair (list or tuple): amount and degree of random pixel
     dropout applied.
     -
-    x_shift (list or tuple): range relative to image size from which a 
+    x_shift (list or tuple): range relative to image size from which a
     random x-axis translation is drawn.
     -
-    y_shift (list or tuple): range relative to image size from which a 
+    y_shift (list or tuple): range relative to image size from which a
     random y-axis translation is drawn.
     -
-    clip_limit (list or tuple): range from which random clip limits for 
+    clip_limit (list or tuple): range from which random clip limits for
     CLAH equalization are drawn.
     -
-    pwa_scale (list or tuple): range relative to image size from which 
+    pwa_scale (list or tuple): range relative to image size from which
     random piecewise affine translations are drawn.
     -
-    h_flip (float): proportion of images on which a horizontal flip is 
+    h_flip (float): proportion of images on which a horizontal flip is
     performed.
     -
-    v_flip (float): proportion of images on which a vertical flip is 
+    v_flip (float): proportion of images on which a vertical flip is
     performed.
     -
-    g_sev (int): amount (or range if batch is randomized) of severity with 
+    g_sev (int): amount (or range if batch is randomized) of severity with
     which gaussian noise is applied.
     -
-    b_sev (int): amount (or range if batch is randomized) of severity with 
+    b_sev (int): amount (or range if batch is randomized) of severity with
     which brightness is altered.
     -
-    e_sev (int): amount (or range if batch is randomized) of severity with 
+    e_sev (int): amount (or range if batch is randomized) of severity with
     which elastic transformation is applied.
     -
     contrast (bool): whether or not random contrast adjustment is applied.
     -
-    sharpness (bool): whether or not random sharpness adjustment is 
+    sharpness (bool): whether or not random sharpness adjustment is
     applied.
     -
-    randomize_batch (bool): whether the augmentation parameters applied 
-    are fixed as the input given or are randomly drawn from a range 
+    randomize_batch (bool): whether the augmentation parameters applied
+    are fixed as the input given or are randomly drawn from a range
     inferred from the input given.
     -
     f_list (list): list of augmentation functions that have been applied.
@@ -222,7 +223,7 @@ class Augmenter:
     -
     display_sample: randomly augment and display image.
     -
-    augment_flow: apply augmentation to images located in directories 
+    augment_flow: apply augmentation to images located in directories
     on disk, and save augmented images to disk.
     """
 
@@ -242,7 +243,7 @@ class Augmenter:
         e_sev=None,
         contrast=False,
         sharpness=False,
-        randomize_batch=False
+        randomize_batch=False,
     ):
 
         """
@@ -847,9 +848,15 @@ class Augmenter:
         if prenorm:
             img = (img * 255).astype(np.uint8)
         if full_set:
-            order = np.random.choice(np.arange(self.argno),size=self.argno,replace=False)
+            order = np.random.choice(
+                np.arange(self.argno), size=self.argno, replace=False
+            )
         else:
-            order = np.random.choice(np.arange(self.argno),size=np.random.randint(self.argno),replace=False)
+            order = np.random.choice(
+                np.arange(self.argno),
+                size=np.random.randint(self.argno),
+                replace=False,
+            )
         for i in order:
             function = self.f_list[i]
             outp = function(img)
@@ -928,9 +935,17 @@ class Augmenter:
 
         elif source_type == "ids":
             if source.shadow["data"][0] is None:
-                img = source.shadow["train"][0][np.random.randint(source.shadow["train"][0].shape[0])]
+                img = source.shadow["train"][0][
+                    np.random.randint(
+                        source.shadow["train"][0].shape[0]
+                    )
+                ]
             else:
-                img = source.shadow["data"][0][np.random.randint(source.shadow["train"][0].shape[0])]
+                img = source.shadow["data"][0][
+                    np.random.randint(
+                        source.shadow["train"][0].shape[0]
+                    )
+                ]
         else:
             raise Exception(
                 "Must choose valid source type: either 'path' or 'ids'."
@@ -1040,12 +1055,18 @@ class Augmenter:
 
         if class_selection:
             if type(class_selection) is not list:
-                raise Exception(f"Class selection must be a list; {type(class_selection)} given.")
+                raise Exception(
+                    f"Class selection must be a list; {type(class_selection)} given."
+                )
             else:
                 df = df.loc[df["class"].isin(class_selection)]
 
         if len(df.loc[df["class"] == "no_class"]) != 0:
-            if int(df.loc[df["class"] == "no_class"]["class"].value_counts()) == len(df):
+            if int(
+                df.loc[df["class"] == "no_class"][
+                    "class"
+                ].value_counts()
+            ) == len(df):
                 no_class = True
 
         class_list = list(df["class"].unique())
@@ -1054,7 +1075,9 @@ class Augmenter:
             all_class_arrays.append(class_arrays)
 
         if (number is not None) and (size is not None):
-            raise Exception("Cannot accept both number and size arguments.")
+            raise Exception(
+                "Cannot accept both number and size arguments."
+            )
 
         elif (number is not None) and (size is None):
             for a in all_class_arrays:
@@ -1064,9 +1087,13 @@ class Augmenter:
         elif (number is None) and (size is not None):
             for a in all_class_arrays:
                 if size - a.shape[0] < 0:
-                    raise Exception("Cannot accept size argument smaller than number of images.")
+                    raise Exception(
+                        "Cannot accept size argument smaller than number of images."
+                    )
                 else:
-                    to_augment = np.random.randint(a.shape[0], size=size - a.shape[0])
+                    to_augment = np.random.randint(
+                        a.shape[0], size=size - a.shape[0]
+                    )
                     all_aug_indices.append(to_augment)
 
         else:
@@ -1075,7 +1102,7 @@ class Augmenter:
                 all_aug_indices.append(to_augment)
 
         if save:
-            if no_class == True:        
+            if no_class == True:
                 my_path = "imgo_output/augtools/augment_flow"
 
                 r = None
@@ -1085,33 +1112,58 @@ class Augmenter:
                             os.mkdir(i)
                         r = i
                     else:
-                        if not os.path.exists(r+"/"+i):
-                            os.mkdir(r+"/"+i)
-                        r = r+"/"+i                
+                        if not os.path.exists(r + "/" + i):
+                            os.mkdir(r + "/" + i)
+                        r = r + "/" + i
 
-                for i, j in tqdm(enumerate(all_aug_indices[0]),total=len(all_aug_indices[0])):
-                    aug_img = self.random_augment(all_class_arrays[0][j])
-                    imageio.imwrite(f"{r}/aug_{i+1}.jpg",aug_img)
+                for i, j in tqdm(
+                    enumerate(all_aug_indices[0]),
+                    total=len(all_aug_indices[0]),
+                ):
+                    aug_img = self.random_augment(
+                        all_class_arrays[0][j]
+                    )
+                    imageio.imwrite(f"{r}/aug_{i+1}.jpg", aug_img)
                     aug_imgs.append(aug_img)
                 print("Augmented images saved successfully.")
-            
+
             else:
                 for x in range(len(all_class_arrays)):
-                    for i, j in tqdm(enumerate(all_aug_indices[x]),total=len(all_aug_indices[x])):
-                        aug_img = self.random_augment(all_class_arrays[x][j])
-                        imageio.imwrite(f"{base_path}/{class_list[x]}/{class_list[x]}_aug_{i+1}.jpg",aug_img)
+                    for i, j in tqdm(
+                        enumerate(all_aug_indices[x]),
+                        total=len(all_aug_indices[x]),
+                    ):
+                        aug_img = self.random_augment(
+                            all_class_arrays[x][j]
+                        )
+                        imageio.imwrite(
+                            f"{base_path}/{class_list[x]}/{class_list[x]}_aug_{i+1}.jpg",
+                            aug_img,
+                        )
                         aug_imgs.append(aug_img)
-                print("Augmented images saved successfully in class subdirectories.")
+                print(
+                    "Augmented images saved successfully in class subdirectories."
+                )
         else:
             if no_class == True:
-                for i, j in tqdm(enumerate(all_aug_indices[0]),total=len(all_aug_indices[0])):
-                    aug_img = self.random_augment(all_class_arrays[0][j])
+                for i, j in tqdm(
+                    enumerate(all_aug_indices[0]),
+                    total=len(all_aug_indices[0]),
+                ):
+                    aug_img = self.random_augment(
+                        all_class_arrays[0][j]
+                    )
                     aug_imgs.append(aug_img)
 
             else:
                 for x in range(len(all_class_arrays)):
-                    for i, j in tqdm(enumerate(all_aug_indices[x]),total=len(all_aug_indices[x])):
-                        aug_img = self.random_augment(all_class_arrays[x][j])
+                    for i, j in tqdm(
+                        enumerate(all_aug_indices[x]),
+                        total=len(all_aug_indices[x]),
+                    ):
+                        aug_img = self.random_augment(
+                            all_class_arrays[x][j]
+                        )
                         aug_imgs.append(aug_img)
 
             return np.array(aug_imgs)
