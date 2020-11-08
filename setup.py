@@ -8,7 +8,7 @@ setuptools.setup(
     version="2.0.2",
     author="Elby Data",
     author_email="info@elbydata.com",
-    description="Image data processing and augmentation",
+    description="Image data processing and augmentation tools",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/elbydata/imgo",
