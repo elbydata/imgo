@@ -942,9 +942,7 @@ class Augmenter:
                 ]
             else:
                 img = source.shadow["data"][0][
-                    np.random.randint(
-                        source.shadow["data"][0].shape[0]
-                    )
+                    np.random.randint(source.shadow["data"][0].shape[0])
                 ]
         else:
             raise Exception(
