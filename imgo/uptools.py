@@ -3,12 +3,12 @@ IMGO - Compile, process, and augment image data.
 -------------------------------------------------
 UPTOOLS module: 
 
-Last updated: version 1.2.0
+Last updated: version 2.0.0
 
 Classes
 -------
 Image_Dataset: Class representing an image dataset, being a collection
-of X (image data) and y (label data) arrays.
+of X (square image data) and y (label data) arrays.
 
     Class Attributes:
         base_path (str): path to the directory containing images or class
@@ -75,6 +75,9 @@ of X (image data) and y (label data) arrays.
         init: constructs the necessary attributes for the dataset.
         -
         details: prints or displays summary details about the dataset.
+        -
+        map_classes: maps class names to label data from new list of 
+        class names.        
         -
         data_split: splits X and y data into training, validation and 
         testing subsets.
@@ -289,7 +292,7 @@ def display_img_df(df, batch_no, batch_size, n_rows, n_cols):
 # ------------------------------------------------------------------------
 
 
-def read_img_df(df, class_name=None, save=False):
+def read_img_df(df, img_scale, class_name=None, save=False):
 
     """
     Reads images contained in an x-by-2 DataFrame (where column 0 is the
@@ -324,7 +327,8 @@ def read_img_df(df, class_name=None, save=False):
     label_list = []
     n = 0
     for i, j in data_df.iterrows():
-        img = imageio.imread(j[0])
+        raw_img = imageio.imread(j[0])
+        img = auto_rescale(raw_img, img_scale)
         img_list.append(img)
         if j[1] == "no_class":
             label = n
@@ -333,11 +337,11 @@ def read_img_df(df, class_name=None, save=False):
             label = j[1]
         label_list.append(label)
     img_array = np.array(img_list)
-    label_array = np.array(label_list)
+    label_array = np.array(label_list).astype(np.uint8)
 
     if save:
 
-        my_path = "imgo_output/uptools/preprocessing/X_data"
+        my_path = "imgo_output/uptools/preprocessing"
 
         r = None
         for i in my_path.split("/"):
@@ -350,8 +354,9 @@ def read_img_df(df, class_name=None, save=False):
                     os.mkdir(r + "/" + i)
                 r = r + "/" + i
 
-        save_no = len(os.listdir(f"{r}")) + 1
-        np.savez(f"{r}/X_data_{save_no}", img_array)
+        with h5py.File(f"{r}/X_data.h5", "w") as hf:
+            hf.create_dataset(f"X_data", data=img_array)
+        print(f"{r}/X_data.h5 saved successfully.")
 
     return img_array
 
@@ -407,7 +412,7 @@ def one_hot_encode(y_data, class_list, save=False):
 
     if save:
 
-        my_path = "imgo_output/uptools/preprocessing/y_data"
+        my_path = "imgo_output/uptools/preprocessing"
 
         r = None
         for i in my_path.split("/"):
@@ -420,10 +425,9 @@ def one_hot_encode(y_data, class_list, save=False):
                     os.mkdir(r + "/" + i)
                 r = r + "/" + i
 
-        save_no = len(os.listdir(f"{r}")) + 1
-        np.savez(f"{r}/y_data_{save_no}", img_array)
-
-    return img_array
+        with h5py.File(f"{r}/y_data.h5", "w") as hf:
+            hf.create_dataset(f"y_data", data=y_data)
+        print(f"{r}/y_data.h5 saved successfully.")
 
     return y_data
 
@@ -472,7 +476,7 @@ class Image_Dataset:
 
     """
     Image_Dataset: Class representing an image dataset, being a collection
-    of X (image data) and y (label data) arrays.
+    of X (square image data) and y (label data) arrays.
 
     Attributes
     ----------
@@ -542,6 +546,9 @@ class Image_Dataset:
     -
     details: prints or displays summary details about the dataset.
     -
+    map_classes: maps class names to label data from new list of class
+    names.
+    -
     data_split: splits X and y data into training, validation and testing
     subsets.
     -
@@ -565,9 +572,9 @@ class Image_Dataset:
         self,
         base_path,
         mode,
+        img_scale,
         pre_norm=False,
         pre_std=False,
-        rescale=None,
         normalize=False,
         standardize=False,
         manual_classes=None,
@@ -582,6 +589,9 @@ class Image_Dataset:
             -
             mode (str): format of source image data: "img" if raw images,
             "np" if numpy-arrays, or "h5" if HDF5 format.
+            -
+            img_scale (int): dimensions for desired (square) output
+            images. If None, no resizing will occur. Defaults to None.
 
         Keyword Arguments:
             pre_norm (bool) optional: whether or not the numpy data has
@@ -593,9 +603,6 @@ class Image_Dataset:
             been standardized prior to initialization of the Image_Dataset
             object. If it has been normalized, not setting this argument
             to True will result in error. Defaults to False.
-            -
-            rescale (int) optional: dimensions for desired (square) output
-            images. If None, no resizing will occur. Defaults to None.
             -
             normalize (bool) optional: whether or not to normalize image
             pixel values to range [0,1]. Note that normalized datasets
@@ -626,18 +633,15 @@ class Image_Dataset:
             self.mode = mode
         else:
             raise Exception(
-                "Must select valid mode: 'img_dir', 'np', or 'h5'."
+                "Must select valid mode: 'imgs', 'np', or 'h5'."
             )
 
-        if rescale is not None:
-            if type(rescale) is int:
-                rescale_dims = rescale
-            else:
-                raise Exception(
-                    f"'rescale' argument must be integer, {type(resize)} given."
-                )
-                rescale_dims = None
+        if type(img_scale) is int:
+            rescale_dims = img_scale
         else:
+            raise Exception(
+                f"'img_scale' argument must be integer, {type(img_scale)} given."
+            )
             rescale_dims = None
 
         if normalize and standardize:
@@ -1022,16 +1026,24 @@ class Image_Dataset:
         if self.split == 0:
             imgs_per_class = labs_nums["data"]
             df_cols = ["data"]
+            splits = None
             colors = ["#81ecec"]
+        elif self.split == 1:
+            imgs_per_class = labs_nums
+            df_cols = ["train", "test"]
+            splits = df_cols
+            colors = ["#81ecec", "#a29bfe"]
         else:
             imgs_per_class = labs_nums
             df_cols = ["train", "val", "test"]
+            splits = df_cols
             colors = ["#81ecec", "#74b9ff", "#a29bfe"]
 
         val_ranges = {"min": self.min_pv, "max": self.max_pv}
 
         ds_dict = {
             "total_images": self.size,
+            "splits": splits,
             "images_per_class": imgs_per_class,
             "image_size": self.dims,
             "pixel_values": val_ranges,
@@ -1086,6 +1098,31 @@ class Image_Dataset:
             print("---------------------")
             for k, v in ds_dict.items():
                 print(f"{k}: {v}\n-")
+
+    #     ----------
+
+    def map_classes(self, class_list):
+
+        """
+        Maps class names from a new list of classes.
+        """
+
+        if type(class_list) is list:
+            new_list = sorted(
+                [str(i) for i in class_list], key=lambda f: f.lower()
+            )
+
+            if len(new_list) == len(self.class_list):
+                for i in range(len(self.class_list)):
+                    self.class_list[i] = new_list[i]
+            else:
+                raise Exception(
+                    "Number of classes given does not match number in Image_Dataset."
+                )
+        else:
+            raise Exception(
+                f"'class_list' argument must be list, {type(class_list)} given."
+            )
 
     #     ----------
 
@@ -1480,16 +1517,16 @@ class Image_Dataset:
 
     #     ----------
 
-    def save_arrays(self, save_path):
+    def save_arrays(self, save_dir):
 
         """
         Saves the dataset in HDF5 format into a directory specified by
-        the 'save_path' argument. Note that the directory will be
+        the 'save_dir' argument. Note that the directory will be
         created if it does not already exist, and that existing data
         within the specified directory will be overwritten.
         """
 
-        my_path = "imgo_output/uptools/save_arrays/" + save_path
+        my_path = "imgo_output/uptools/save_arrays/" + save_dir
 
         r = None
         for i in my_path.split("/"):
@@ -1519,18 +1556,18 @@ class Image_Dataset:
 
     #     ----------
 
-    def save_imgs(self, save_path):
+    def save_imgs(self, save_dir):
 
         """
         Saves the dataset in image format into a directory specified
-        by the 'save_path' argument (images are saved into
+        by the 'save_dir' argument (images are saved into
         subdirectories for each class within the this directory).
         Note that the directory will be created if it does not already
         exist, and that existing data within the specified directory
         will be overwritten.
         """
 
-        my_path = "imgo_output/uptools/save_imgs/" + save_path
+        my_path = "imgo_output/uptools/save_imgs/" + save_dir
 
         r = None
         for i in my_path.split("/"):

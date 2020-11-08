@@ -6,7 +6,7 @@ This library is designed to facilitate the preprocessing phase of image classifi
 
 ### Features:
 
-Imgo is composed of two distinct but related modules: **Uptools** and **Augtools**.
+Imgo is composed of two distinct but related modules: **uptools** and **augtools**.
 
 **Uptools** helps to streamline various image data preprocessing tasks, such as:
 
@@ -58,4 +58,4 @@ The project is licensed under the MIT license.
 
 ### Acknowledgements
 
-The **Augtools** library is built on top of **Imgaug**, a powerful image augmentation library. For more information, please see https://imgaug.readthedocs.io/en/latest/.
+The **Augtools** library is built as a wrapper around **Imgaug**, a powerful image augmentation library. For more information, please see https://imgaug.readthedocs.io/en/latest/.

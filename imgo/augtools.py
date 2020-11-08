@@ -3,7 +3,7 @@ IMGO - Compile, process, and augment image data.
 -------------------------------------------------
 AUGTOOLS module: 
 
-Last updated: version 1.2.0
+Last updated: version 2.0.0
 
 Classes
 -------        
@@ -448,16 +448,16 @@ class Augmenter:
 
     #     ----------
 
-    def aug_rotate(self, img, prenorm=False):
+    def aug_rotate(self, img, pre_norm=False):
 
         """
         Rotates the image by a random angle within the range given.
-        Note: Set prenorm to True if image has been normalized to [0,1].
+        Note: Set pre_norm to True if image has been normalized to [0,1].
         """
 
         if self.rotate_range is not None:
             rotate = iaa.Affine(rotate=self.rotate_range, mode="edge")
-            if prenorm:
+            if pre_norm:
                 img = (img * 255).astype(np.uint8)
                 rotated_img = (rotate(image=img)) / 255
             else:
@@ -468,17 +468,17 @@ class Augmenter:
 
     #     ----------
 
-    def aug_shear(self, img, prenorm=False):
+    def aug_shear(self, img, pre_norm=False):
 
         """
         Shear-transforms the image by a random angle within the range
         given.
-        Note: Set prenorm to True if image has been normalized to [0,1].
+        Note: Set pre_norm to True if image has been normalized to [0,1].
         """
 
         if self.shear_range is not None:
             shear = iaa.Affine(shear=self.shear_range, mode="edge")
-            if prenorm:
+            if pre_norm:
                 img = (img * 255).astype(np.uint8)
                 shear_img = (shear(image=img)) / 255
             else:
@@ -489,11 +489,11 @@ class Augmenter:
 
     #     ----------
 
-    def aug_dropout(self, img, prenorm=False):
+    def aug_dropout(self, img, pre_norm=False):
 
         """
         Drops a portion of pixel values to zero.
-        Note: Set prenorm to True if image has been normalized to [0,1].
+        Note: Set pre_norm to True if image has been normalized to [0,1].
         """
 
         if self.dropout_pair is not None:
@@ -512,7 +512,7 @@ class Augmenter:
                     self.dropout_pair[0],
                     size_percent=self.dropout_pair[1],
                 )
-            if prenorm:
+            if pre_norm:
                 img = (img * 255).astype(np.uint8)
                 dropout_img = (dropout(image=img)) / 255
             else:
@@ -523,17 +523,17 @@ class Augmenter:
 
     #     ----------
 
-    def aug_x_shift(self, img, prenorm=False):
+    def aug_x_shift(self, img, pre_norm=False):
 
         """
         Shifts the image on the x-axis by a random amount within the
         range given.
-        Note: Set prenorm to True if image has been normalized to [0,1].
+        Note: Set pre_norm to True if image has been normalized to [0,1].
         """
 
         if self.x_shift is not None:
             x_shift = iaa.TranslateX(percent=self.x_shift, mode="edge")
-            if prenorm:
+            if pre_norm:
                 img = (img * 255).astype(np.uint8)
                 x_shift_img = (x_shift(image=img)) / 255
             else:
@@ -544,17 +544,17 @@ class Augmenter:
 
     #     ----------
 
-    def aug_y_shift(self, img, prenorm=False):
+    def aug_y_shift(self, img, pre_norm=False):
 
         """
         Shifts the image on the y-axis by a random amount within the
         range given.
-        Note: Set prenorm to True if image has been normalized to [0,1].
+        Note: Set pre_norm to True if image has been normalized to [0,1].
         """
 
         if self.y_shift is not None:
             y_shift = iaa.TranslateY(percent=self.y_shift, mode="edge")
-            if prenorm:
+            if pre_norm:
                 img = (img * 255).astype(np.uint8)
                 y_shift_img = (y_shift(image=img)) / 255
             else:
@@ -565,17 +565,17 @@ class Augmenter:
 
     #     ----------
 
-    def aug_clahe(self, img, prenorm=False):
+    def aug_clahe(self, img, pre_norm=False):
 
         """
         Applies a CLAH equalization using a random clip limit within
         the range given.
-        Note: Set prenorm to True if image has been normalized to [0,1].
+        Note: Set pre_norm to True if image has been normalized to [0,1].
         """
 
         if self.clip_limit is not None:
             clahe = iaa.CLAHE(clip_limit=self.clip_limit)
-            if prenorm:
+            if pre_norm:
                 img = (img * 255).astype(np.uint8)
                 clahe_img = (clahe(image=img)) / 255
             else:
@@ -586,17 +586,17 @@ class Augmenter:
 
     #     ----------
 
-    def aug_pwa(self, img, prenorm=False):
+    def aug_pwa(self, img, pre_norm=False):
 
         """
         Shifts local pixel areas by a random amount within the range
         given.
-        Note: Set prenorm to True if image has been normalized to [0,1].
+        Note: Set pre_norm to True if image has been normalized to [0,1].
         """
 
         if self.pwa_scale is not None:
             pwa = iaa.PiecewiseAffine(scale=self.pwa_scale, mode="edge")
-            if prenorm:
+            if pre_norm:
                 img = (img * 255).astype(np.uint8)
                 pwa_img = (pwa(image=img)) / 255
             else:
@@ -607,16 +607,16 @@ class Augmenter:
 
     #     ----------
 
-    def aug_h_flip(self, img, prenorm=False):
+    def aug_h_flip(self, img, pre_norm=False):
 
         """
         Flips a random subset of images horizontally.
-        Note: Set prenorm to True if image has been normalized to [0,1].
+        Note: Set pre_norm to True if image has been normalized to [0,1].
         """
 
         if self.h_flip is not None:
             h_flip = iaa.Fliplr(self.h_flip)
-            if prenorm:
+            if pre_norm:
                 img = (img * 255).astype(np.uint8)
                 h_flip_img = (h_flip(image=img)) / 255
             else:
@@ -627,16 +627,16 @@ class Augmenter:
 
     #     ----------
 
-    def aug_v_flip(self, img, prenorm=False):
+    def aug_v_flip(self, img, pre_norm=False):
 
         """
         Flipts a random subset of images vertically.
-        Note: Set prenorm to True if image has been normalized to [0,1].
+        Note: Set pre_norm to True if image has been normalized to [0,1].
         """
 
         if self.v_flip is not None:
             v_flip = iaa.Flipud(self.v_flip)
-            if prenorm:
+            if pre_norm:
                 img = (img * 255).astype(np.uint8)
                 v_flip_img = (v_flip(image=img)) / 255
             else:
@@ -647,11 +647,11 @@ class Augmenter:
 
     #     ----------
 
-    def aug_g_noise(self, img, prenorm=False):
+    def aug_g_noise(self, img, pre_norm=False):
 
         """
         Adds Gaussian noise to the image.
-        Note: Set prenorm to True if image has been normalized to [0,1].
+        Note: Set pre_norm to True if image has been normalized to [0,1].
         """
 
         if self.g_sev is not None:
@@ -670,7 +670,7 @@ class Augmenter:
             if g_noise is None:
                 return img
             else:
-                if prenorm:
+                if pre_norm:
                     img = (img * 255).astype(np.uint8)
                     g_noise_img = (g_noise(image=img)) / 255
                 else:
@@ -681,11 +681,11 @@ class Augmenter:
 
     #     ----------
 
-    def aug_brightness(self, img, prenorm=False):
+    def aug_brightness(self, img, pre_norm=False):
 
         """
         Adjusts brightness of the image.
-        Note: Set prenorm to True if image has been normalized to [0,1].
+        Note: Set pre_norm to True if image has been normalized to [0,1].
         """
 
         if self.b_sev is not None:
@@ -704,7 +704,7 @@ class Augmenter:
             if brightness is None:
                 return img
             else:
-                if prenorm:
+                if pre_norm:
                     img = (img * 255).astype(np.uint8)
                     brightness_img = (brightness(image=img)) / 255
                 else:
@@ -715,11 +715,11 @@ class Augmenter:
 
     #     ----------
 
-    def aug_elastic(self, img, prenorm=False):
+    def aug_elastic(self, img, pre_norm=False):
 
         """
         Applies elastic transformation to the image.
-        Note: Set prenorm to True if image has been normalized to [0,1].
+        Note: Set pre_norm to True if image has been normalized to [0,1].
         """
 
         if self.e_sev is not None:
@@ -738,7 +738,7 @@ class Augmenter:
             if elastic is None:
                 return img
             else:
-                if prenorm:
+                if pre_norm:
                     img = (img * 255).astype(np.uint8)
                     elastic_img = (elastic(image=img)) / 255
                 else:
@@ -749,30 +749,30 @@ class Augmenter:
 
     #     ----------
 
-    def aug_contrast(self, img, prenorm=False):
+    def aug_contrast(self, img, pre_norm=False):
 
         """
         Adusts contrast to a random subset of images.
-        Note: Set prenorm to True if image has been normalized to [0,1].
+        Note: Set pre_norm to True if image has been normalized to [0,1].
         """
 
         if self.contrast == True:
             contrast = iaa.pillike.EnhanceContrast()
             if self.randomize_batch == True:
                 if np.random.randint(2) == True:
-                    if prenorm:
+                    if pre_norm:
                         img = (img * 255).astype(np.uint8)
                         contrast_img = (contrast(image=img)) / 255
                     else:
                         contrast_img = contrast(image=img)
                 else:
-                    if prenorm:
+                    if pre_norm:
                         img = (img * 255).astype(np.uint8)
                         contrast_img = (contrast(image=img)) / 255
                     else:
                         contrast_img = img
             else:
-                if prenorm:
+                if pre_norm:
                     img = (img * 255).astype(np.uint8)
                     contrast_img = (contrast(image=img)) / 255
                 else:
@@ -783,30 +783,30 @@ class Augmenter:
 
     #     ----------
 
-    def aug_sharpness(self, img, prenorm=False):
+    def aug_sharpness(self, img, pre_norm=False):
 
         """
         Adjusts sharpness to a random subset of images.
-        Note: Set prenorm to True if image has been normalized to [0,1].
+        Note: Set pre_norm to True if image has been normalized to [0,1].
         """
 
         if self.sharpness == True:
             sharpness = iaa.pillike.EnhanceSharpness()
             if self.randomize_batch == True:
                 if np.random.randint(2) == True:
-                    if prenorm:
+                    if pre_norm:
                         img = (img * 255).astype(np.uint8)
                         sharpness_img = (sharpness(image=img)) / 255
                     else:
                         sharpness_img = sharpness(image=img)
                 else:
-                    if prenorm:
+                    if pre_norm:
                         img = (img * 255).astype(np.uint8)
                         sharpness_img = (sharpness(image=img)) / 255
                     else:
                         sharpness_img = img
             else:
-                if prenorm:
+                if pre_norm:
                     img = (img * 255).astype(np.uint8)
                     sharpness_img = (sharpness(image=img)) / 255
                 else:
@@ -817,35 +817,35 @@ class Augmenter:
 
     #     ----------
 
-    def simple_augment(self, img, prenorm=False):
+    def simple_augment(self, img, pre_norm=False):
 
         """
         Performs the augmentations (for which a parameter was provided)
         in order.
-        Note: Set prenorm to True if image has been normalized to [0,1].
+        Note: Set pre_norm to True if image has been normalized to [0,1].
         """
-        if prenorm:
+        if pre_norm:
             img = (img * 255).astype(np.uint8)
         order = np.arange(self.argno)
         for i in order:
             function = self.f_list[i]
             outp = function(img)
             img = outp
-        if prenorm:
+        if pre_norm:
             return outp / 255
         else:
             return outp
 
     #     ----------
 
-    def random_augment(self, img, full_set=True, prenorm=False):
+    def random_augment(self, img, full_set=True, pre_norm=False):
 
         """
         Performs the augmentations (for which a parameter was provided)
         in a random order.
-        Note: Set prenorm to True if image has been normalized to [0,1].
+        Note: Set pre_norm to True if image has been normalized to [0,1].
         """
-        if prenorm:
+        if pre_norm:
             img = (img * 255).astype(np.uint8)
         if full_set:
             order = np.random.choice(
@@ -861,7 +861,7 @@ class Augmenter:
             function = self.f_list[i]
             outp = function(img)
             img = outp
-        if prenorm:
+        if pre_norm:
             return outp / 255
         else:
             return outp
@@ -875,7 +875,7 @@ class Augmenter:
         n_rows,
         n_cols,
         augment_type="random",
-        prenorm=False,
+        pre_norm=False,
     ):
 
         """
@@ -916,7 +916,7 @@ class Augmenter:
             for the display. If "simple", the simple_augment method
             will be used. Defaults to "random".
             -
-            prenorm (bool) optional: whether or not the image data
+            pre_norm (bool) optional: whether or not the image data
             has been normalized to the range [0,1]. If it has, not
             setting this to True will result in error. Defaults to
             False.
@@ -943,16 +943,13 @@ class Augmenter:
             else:
                 img = source.shadow["data"][0][
                     np.random.randint(
-                        source.shadow["train"][0].shape[0]
+                        source.shadow["data"][0].shape[0]
                     )
                 ]
         else:
             raise Exception(
                 "Must choose valid source type: either 'path' or 'ids'."
             )
-
-        if prenorm:
-            img = (img * 255).astype(np.uint8)
 
         plt.rcParams["font.family"] = "sans-serif"
         plt.rcParams["font.sans-serif"] = "Helvetica"
@@ -967,8 +964,6 @@ class Augmenter:
         for i in tqdm(range(2, (n_rows * n_cols) + 1)):
             if augment_type == "simple":
                 aug_img = self.simple_augment(img)
-            elif augment_type == "random":
-                aug_img = self.random_augment(img)
             else:
                 aug_img = self.random_augment(img)
             ax = fig.add_subplot(n_rows, n_cols, i)
