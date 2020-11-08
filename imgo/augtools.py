@@ -3,7 +3,7 @@ IMGO - Compile, process, and augment image data.
 -------------------------------------------------
 AUGTOOLS module: 
 
-Last updated: version 2.0.0
+Last updated: version 2.0.2
 
 Classes
 -------        
@@ -884,11 +884,6 @@ class Augmenter:
         according to the parameters given, in order to visualize
         augmentations prior to running on multiple images.
 
-        Note that this function requires the image data to be in image
-        form (as opposed to numpy-arrays) and located in the relevant
-        directories, ie a single image directory (the base path) or a
-        subdirectory for each class within the image directory.
-
         Arguments:
             source_type (str): type of the source from which the sample
             is drawn. Can either be "path" or "ids". If "path", the
@@ -919,7 +914,7 @@ class Augmenter:
             pre_norm (bool) optional: whether or not the image data
             has been normalized to the range [0,1]. If it has, not
             setting this to True will result in error. Defaults to
-            False.
+            False. Only relevant for "path" mode.
 
         Returns:
             Visualization of randomly augmented image.
@@ -1027,9 +1022,9 @@ class Augmenter:
             save (bool) optional: whether or not to save the images in
             the directory given as the base_path argument. If the
             directory structure has no classes, these will be saved in a
-            newly created directory named augmented_images. If the
-            directory structure has subdirectories for each class, the
-            augmented images will be saved in the corresponding class
+            newly created directory: 'imgo_output/augtools/augment_flow'.
+            If the directory structure has subdirectories for each class,
+            the augmented images will be saved in the corresponding class
             subdirectory. Defaults to False.
 
         Returns:

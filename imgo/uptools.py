@@ -3,7 +3,7 @@ IMGO - Compile, process, and augment image data.
 -------------------------------------------------
 UPTOOLS module: 
 
-Last updated: version 2.0.0
+Last updated: version 2.0.2
 
 Classes
 -------
@@ -292,7 +292,7 @@ def display_img_df(df, batch_no, batch_size, n_rows, n_cols):
 # ------------------------------------------------------------------------
 
 
-def read_img_df(df, img_scale, class_name=None, save=False):
+def read_img_df(df, img_scale=None, class_name=None, save=False):
 
     """
     Reads images contained in an x-by-2 DataFrame (where column 0 is the
@@ -305,15 +305,18 @@ def read_img_df(df, img_scale, class_name=None, save=False):
         images)
 
     Keyword Arguments:
+        img_scale (int): dimensions for desired (square) output images.
+        If None, no resizing will occur. Defaults to None.
+        -
         class_name (str) optional: name of a class in the DataFrame. If
         given, only images belonging to that class will be read. Defaults
         to None.
         -
         save (bool) optional: whether or not to save resulting array of
-        image data as a .npz file. Note that saving will create a new
-        directory named "read_img_df" if it does not already exist.
-        If it does exist, no files inside it will be overwritten.
-        Defaults to False.
+        image data as a .h5 file in the path
+        'imgo_output/uptools/preprocessing'. Note that images can only
+        be saved if they have been rescaled using the 'img_scale'
+        argument. Dafaults to False.
 
     Returns:
         img_array (numpy-array): images as numpy-array.
@@ -328,7 +331,10 @@ def read_img_df(df, img_scale, class_name=None, save=False):
     n = 0
     for i, j in data_df.iterrows():
         raw_img = imageio.imread(j[0])
-        img = auto_rescale(raw_img, img_scale)
+        if img_scale:
+            img = auto_rescale(raw_img, img_scale)
+        else:
+            img = raw_img
         img_list.append(img)
         if j[1] == "no_class":
             label = n
@@ -337,26 +343,31 @@ def read_img_df(df, img_scale, class_name=None, save=False):
             label = j[1]
         label_list.append(label)
     img_array = np.array(img_list)
-    label_array = np.array(label_list).astype(np.uint8)
+    label_array = np.array(label_list)
 
     if save:
+        if img_scale == None:
+            raise Exception(
+                "Cannot save images with inconsistent dimensions."
+            )
+        else:
 
-        my_path = "imgo_output/uptools/preprocessing"
+            my_path = "imgo_output/uptools/preprocessing"
 
-        r = None
-        for i in my_path.split("/"):
-            if r == None:
-                if not os.path.exists(i):
-                    os.mkdir(i)
-                r = i
-            else:
-                if not os.path.exists(r + "/" + i):
-                    os.mkdir(r + "/" + i)
-                r = r + "/" + i
+            r = None
+            for i in my_path.split("/"):
+                if r == None:
+                    if not os.path.exists(i):
+                        os.mkdir(i)
+                    r = i
+                else:
+                    if not os.path.exists(r + "/" + i):
+                        os.mkdir(r + "/" + i)
+                    r = r + "/" + i
 
-        with h5py.File(f"{r}/X_data.h5", "w") as hf:
-            hf.create_dataset(f"X_data", data=img_array)
-        print(f"{r}/X_data.h5 saved successfully.")
+            with h5py.File(f"{r}/X_data.h5", "w") as hf:
+                hf.create_dataset(f"X_data", data=img_array)
+            print(f"{r}/X_data.h5 saved successfully.")
 
     return img_array
 
@@ -380,10 +391,8 @@ def one_hot_encode(y_data, class_list, save=False):
 
     Keyword Arguments:
         save (bool) optional: whether or not to save resulting array of
-        one-hot encoded data as a .npz file. Note that saving will create
-        new directory named "one_hot_encoding" if it does not already
-        exist. If it does exist, no files inside it will be overwritten.
-        Defaults to False.
+        one-hot encoded data as a .h5 file in the path
+        'imgo_output/uptools/preprocessing'. Dafaults to False.
 
     Returns:
         y_data (numpy-array): one-hot encoded class label data as numpy-
@@ -591,7 +600,7 @@ class Image_Dataset:
             "np" if numpy-arrays, or "h5" if HDF5 format.
             -
             img_scale (int): dimensions for desired (square) output
-            images. If None, no resizing will occur. Defaults to None.
+            images.
 
         Keyword Arguments:
             pre_norm (bool) optional: whether or not the numpy data has
