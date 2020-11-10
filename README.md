@@ -58,4 +58,4 @@ The project is licensed under the MIT license.
 
 ### Acknowledgements
 
-The **Augtools** library is built as a wrapper around **Imgaug**, a powerful image augmentation library. For more information, please see https://imgaug.readthedocs.io/en/latest/.
+The **augtools** library is built as a wrapper around **Imgaug**, a powerful image augmentation library. For more information, please see https://imgaug.readthedocs.io/en/latest/.
