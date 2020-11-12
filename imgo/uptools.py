@@ -3,7 +3,7 @@ IMGO - Compile, process, and augment image data.
 -------------------------------------------------
 UPTOOLS module: 
 
-Last updated: version 2.0.2
+Last updated: version 2.1.0
 
 Classes
 -------

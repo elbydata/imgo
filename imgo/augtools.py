@@ -3,7 +3,7 @@ IMGO - Compile, process, and augment image data.
 -------------------------------------------------
 AUGTOOLS module: 
 
-Last updated: version 2.0.2
+Last updated: version 2.1.0
 
 Classes
 -------        
@@ -18,6 +18,12 @@ Augmenter: Class representing an image augmentation system.
         -
         dropout_pair (list or tuple): amount and degree of random pixel 
         dropout applied.
+        -
+        x_scale (list or tuple): range relative to image size from which 
+        a random x-axis rescale value is drawn.
+        -
+        y_scale (list or tuple): range relative to image size from which 
+        a random y-axis rescale value is drawn.
         -
         x_shift (list or tuple): range relative to image size from which 
         a random x-axis translation is drawn.
@@ -52,6 +58,9 @@ Augmenter: Class representing an image augmentation system.
         sharpness (bool): whether or not random sharpness adjustment is 
         applied.
         -
+        edge_mode (str): which method is used to fill pixels created by 
+        any of the augmentation functions.
+        -
         randomize_batch (bool): whether the augmentation parameters 
         applied are fixed as the input given or are randomly drawn from a 
         range inferred from the input given.
@@ -72,6 +81,10 @@ Augmenter: Class representing an image augmentation system.
         aug_shear: apply imgaug Affine shear to image.
         -
         aug_dropout: apply imgaug CoarseDropout to image.
+        -
+        aug_x_scale: apply imgaug ScaleX to image.
+        -
+        aug_y_scale: apply imgaug ScaleY to image.
         -
         aug_x_shift: apply imgaug TranslateX to image.
         -
@@ -143,6 +156,12 @@ class Augmenter:
     dropout_pair (list or tuple): amount and degree of random pixel
     dropout applied.
     -
+    x_scale (list or tuple): range relative to image size from which a
+    random x-axis rescale value is drawn.
+    -
+    y_scale (list or tuple): range relative to image size from which a
+    random y-axis rescale value is drawn.
+    -
     x_shift (list or tuple): range relative to image size from which a
     random x-axis translation is drawn.
     -
@@ -175,6 +194,9 @@ class Augmenter:
     sharpness (bool): whether or not random sharpness adjustment is
     applied.
     -
+    edge_mode (str): which method is used to fill pixels created by any of 
+    the augmentation functions.
+    -
     randomize_batch (bool): whether the augmentation parameters applied
     are fixed as the input given or are randomly drawn from a range
     inferred from the input given.
@@ -194,6 +216,10 @@ class Augmenter:
     aug_shear: apply imgaug Affine shear to image.
     -
     aug_dropout: apply imgaug CoarseDropout to image.
+    -
+    aug_x_scale: apply imgaug ScaleX to image.
+    -
+    aug_y_scale: apply imgaug ScaleY to image.
     -
     aug_x_shift: apply imgaug TranslateX to image.
     -
@@ -232,6 +258,8 @@ class Augmenter:
         rotate_range=None,
         shear_range=None,
         dropout_pair=None,
+        x_scale=None,
+        y_scale=None,
         x_shift=None,
         y_shift=None,
         clip_limit=None,
@@ -243,6 +271,7 @@ class Augmenter:
         e_sev=None,
         contrast=False,
         sharpness=False,
+        edge_mode=None,
         randomize_batch=False,
     ):
 
@@ -259,12 +288,12 @@ class Augmenter:
         normalized.
 
         Keyword Arguments:
-            rotate_range (list or tuple) optional: range (min,max) in
+            rotate_range (list or tuple) optional: range (min, max) in
             degrees from which a random rotation angle is drawn. The
             corresponding aug_rotate function will rotate each image by
             a randomly chosen angle within this range. Defaults to None.
             -
-            shear_range (list or tuple) optional: range (min,max) in
+            shear_range (list or tuple) optional: range (min, max) in
             degrees from which a random shear angle is drawn. The
             corresponding aug_shear function will apply a shear
             adjustment to each image at a randomly chosen angle within
@@ -277,6 +306,16 @@ class Augmenter:
             second is the proportional size of the image from which to
             drop the pixels (thereby increasing the size of the dropped
             portions). Defaults to None.
+            -
+            x_scale (list or tuple) optional: range (min, max) 
+            proportional to image size from which an x-axis scale value is
+            drawn. The corresponding aug_x_scale function will scale the 
+            image to this value along the x-axis. Defaults to None.
+            -
+            y_scale (list or tuple) optional: range (min, max) 
+            proportional to image size from which an y-axis scale value is
+            drawn. The corresponding aug_y_scale function will scale the 
+            image to this value along the y-axis. Defaults to None.
             -
             x_shift (list or tuple) optional: range relative
             to image size from which a random x-axis translation is drawn.
@@ -343,6 +382,13 @@ class Augmenter:
             a random proportion of the images will be adjusted by the
             corresponding aug_sharpness function. Defaults to False.
             -
+            edge_mode (str) optional: which method to use to fill any
+            pixels created by any of the augmentation functions. Choose 
+            from "edge" (fills with the same value as that of the edge of 
+            the array), or "reflect" (reflects the pixel values along edge 
+            of the array). If None, will fill with a constant value.
+            Defaults to None.
+            -
             randomize_batch (bool) optional: whether the
             augmentation parameters applied are fixed as the input given
             or are randomly drawn from a range inferred from the input
@@ -363,6 +409,8 @@ class Augmenter:
             "rotate_range": rotate_range,
             "shear_range": shear_range,
             "dropout_pair": dropout_pair,
+            "x_scale": x_scale,
+            "y_scale": y_scale,
             "x_shift": x_shift,
             "y_shift": y_shift,
             "clip_limit": clip_limit,
@@ -401,11 +449,22 @@ class Augmenter:
                 setattr(self, k, True)
             else:
                 setattr(self, k, False)
+                
+        if edge_mode is not None:
+            if edge_mode in ["edge", "reflect"]:
+                self.edge_mode = edge_mode
+            else:
+                raise Exception("Please select valid 'edge_mode': 'edge', or 'reflect'.")
+                self.edge_mode = "constant"
+        else:
+            self.edge_mode = "constant"
 
         self.f_list = [
             self.aug_rotate,
             self.aug_shear,
             self.aug_dropout,
+            self.aug_x_scale,
+            self.aug_y_scale,
             self.aug_x_shift,
             self.aug_y_shift,
             self.aug_clahe,
@@ -456,7 +515,7 @@ class Augmenter:
         """
 
         if self.rotate_range is not None:
-            rotate = iaa.Affine(rotate=self.rotate_range, mode="edge")
+            rotate = iaa.Affine(rotate=self.rotate_range, mode=self.edge_mode)
             if pre_norm:
                 img = (img * 255).astype(np.uint8)
                 rotated_img = (rotate(image=img)) / 255
@@ -477,7 +536,7 @@ class Augmenter:
         """
 
         if self.shear_range is not None:
-            shear = iaa.Affine(shear=self.shear_range, mode="edge")
+            shear = iaa.Affine(shear=self.shear_range, mode=self.edge_mode)
             if pre_norm:
                 img = (img * 255).astype(np.uint8)
                 shear_img = (shear(image=img)) / 255
@@ -520,9 +579,51 @@ class Augmenter:
             return dropout_img
         else:
             return img
+    
+    #     ----------
+
+    def aug_x_scale(self, img, pre_norm=False):
+
+        """
+        Scales (squashes or stretches) the image on the x-axis by a random 
+        amount within the range given.
+        Note: Set pre_norm to True if image has been normalized to [0,1].
+        """
+
+        if self.x_scale is not None:
+            x_scale = iaa.ScaleX(self.x_scale, mode=self.edge_mode)
+            if pre_norm:
+                img = (img * 255).astype(np.uint8)
+                x_scale_img = (x_scale(image=img)) / 255
+            else:
+                x_scale_img = x_scale(image=img)
+            return x_scale_img
+        else:
+            return img
 
     #     ----------
 
+    def aug_y_scale(self, img, pre_norm=False):
+
+        """
+        Scales (squashes or stretches) the image on the y-axis by a random 
+        amount within the range given.
+        Note: Set pre_norm to True if image has been normalized to [0,1].
+        """
+
+        if self.y_scale is not None:
+            y_scale = iaa.ScaleY(self.y_scale, mode=self.edge_mode)
+            if pre_norm:
+                img = (img * 255).astype(np.uint8)
+                y_scale_img = (y_scale(image=img)) / 255
+            else:
+                y_scale_img = y_scale(image=img)
+            return y_scale_img
+        else:
+            return img
+
+    #     ----------    
+    
     def aug_x_shift(self, img, pre_norm=False):
 
         """
@@ -532,7 +633,7 @@ class Augmenter:
         """
 
         if self.x_shift is not None:
-            x_shift = iaa.TranslateX(percent=self.x_shift, mode="edge")
+            x_shift = iaa.TranslateX(percent=self.x_shift, mode=self.edge_mode)
             if pre_norm:
                 img = (img * 255).astype(np.uint8)
                 x_shift_img = (x_shift(image=img)) / 255
@@ -553,7 +654,7 @@ class Augmenter:
         """
 
         if self.y_shift is not None:
-            y_shift = iaa.TranslateY(percent=self.y_shift, mode="edge")
+            y_shift = iaa.TranslateY(percent=self.y_shift, mode=self.edge_mode)
             if pre_norm:
                 img = (img * 255).astype(np.uint8)
                 y_shift_img = (y_shift(image=img)) / 255
@@ -595,7 +696,7 @@ class Augmenter:
         """
 
         if self.pwa_scale is not None:
-            pwa = iaa.PiecewiseAffine(scale=self.pwa_scale, mode="edge")
+            pwa = iaa.PiecewiseAffine(scale=self.pwa_scale, mode=self.edge_mode)
             if pre_norm:
                 img = (img * 255).astype(np.uint8)
                 pwa_img = (pwa(image=img)) / 255

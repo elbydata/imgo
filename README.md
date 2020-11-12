@@ -21,7 +21,7 @@ Imgo is composed of two distinct but related modules: **uptools** and **augtools
  
 **Augtools** allows the user to quickly and efficiently apply augmentation to image data. With Augtools, users can perform the following augmentation tasks using very few lines of code:
 
- - Apply a small but powerful collection of transformation and corruption functions
+ - Apply a powerful collection of transformation and corruption functions
  - Augment images saved on a local disk
  - Save augmented images in class subdirectories
  - Augment entire image datasets
