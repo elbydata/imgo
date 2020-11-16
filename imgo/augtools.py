@@ -3,7 +3,7 @@ IMGO - Compile, process, and augment image data.
 -------------------------------------------------
 AUGTOOLS module: 
 
-Last updated: version 2.1.0
+Last updated: version 2.2.0
 
 Classes
 -------        
@@ -58,10 +58,10 @@ Augmenter: Class representing an image augmentation system.
         sharpness (bool): whether or not random sharpness adjustment is 
         applied.
         -
-        edge_mode (str): which method is used to fill pixels created by 
+        fill_mode (str): which method is used to fill pixels created by 
         any of the augmentation functions.
         -
-        randomize_batch (bool): whether the augmentation parameters 
+        randomize_params (bool): whether the augmentation parameters 
         applied are fixed as the input given or are randomly drawn from a 
         range inferred from the input given.
         -
@@ -194,10 +194,10 @@ class Augmenter:
     sharpness (bool): whether or not random sharpness adjustment is
     applied.
     -
-    edge_mode (str): which method is used to fill pixels created by any of
+    fill_mode (str): which method is used to fill pixels created by any of
     the augmentation functions.
     -
-    randomize_batch (bool): whether the augmentation parameters applied
+    randomize_params (bool): whether the augmentation parameters applied
     are fixed as the input given or are randomly drawn from a range
     inferred from the input given.
     -
@@ -271,8 +271,8 @@ class Augmenter:
         e_sev=None,
         contrast=False,
         sharpness=False,
-        edge_mode=None,
-        randomize_batch=False,
+        fill_mode=None,
+        randomize_params=False,
     ):
 
         """
@@ -281,7 +281,7 @@ class Augmenter:
         Once initialized, the augmenter applies one or more augmentation
         functions to the image, depending on which keyword arguments are
         given, in a random order. If the batch is randomized (specified
-        with the randomize_batch argument), the functions will be applied
+        with the randomize_params argument), the functions will be applied
         using a random parameter inferred from the argument given.
 
         Note that in order to be augmented, images must be in non-
@@ -382,14 +382,14 @@ class Augmenter:
             a random proportion of the images will be adjusted by the
             corresponding aug_sharpness function. Defaults to False.
             -
-            edge_mode (str) optional: which method to use to fill any
+            fill_mode (str) optional: which method to use to fill any
             pixels created by any of the augmentation functions. Choose
             from "edge" (fills with the same value as that of the edge of
             the array), or "reflect" (reflects the pixel values along edge
             of the array). If None, will fill with a constant value.
             Defaults to None.
             -
-            randomize_batch (bool) optional: whether the
+            randomize_params (bool) optional: whether the
             augmentation parameters applied are fixed as the input given
             or are randomly drawn from a range inferred from the input
             given. If False, the same transformation parameters will be
@@ -402,8 +402,7 @@ class Augmenter:
         # Note: if adding augmentation functions, be sure to add to:
         # (1) __init__ arguments
         # (2) setattribute dictionaries
-        # (3) self.f_list, and
-        # (4) the function itself
+        # (3) the function itself
 
         for k, v in {
             "rotate_range": rotate_range,
@@ -442,7 +441,7 @@ class Augmenter:
         for k, v in {
             "contrast": contrast,
             "sharpness": sharpness,
-            "randomize_batch": randomize_batch,
+            "randomize_params": randomize_params,
         }.items():
 
             if v == True:
@@ -450,35 +449,20 @@ class Augmenter:
             else:
                 setattr(self, k, False)
 
-        if edge_mode is not None:
-            if edge_mode in ["edge", "reflect"]:
-                self.edge_mode = edge_mode
+        if fill_mode is not None:
+            if fill_mode in ["edge", "reflect"]:
+                self.fill_mode = fill_mode
             else:
                 raise Exception(
-                    "Please select valid 'edge_mode': 'edge', or 'reflect'."
+                    "Please select valid 'fill_mode': 'edge', or 'reflect'."
                 )
-                self.edge_mode = "constant"
+                self.fill_mode = "constant"
         else:
-            self.edge_mode = "constant"
+            self.fill_mode = "constant"
 
-        self.f_list = [
-            self.aug_rotate,
-            self.aug_shear,
-            self.aug_dropout,
-            self.aug_x_scale,
-            self.aug_y_scale,
-            self.aug_x_shift,
-            self.aug_y_shift,
-            self.aug_clahe,
-            self.aug_pwa,
-            self.aug_h_flip,
-            self.aug_v_flip,
-            self.aug_g_noise,
-            self.aug_brightness,
-            self.aug_elastic,
-            self.aug_contrast,
-            self.aug_sharpness,
-        ]
+            
+        f_names = sorted([f for f in dir(self) if callable(getattr(self, f)) and f.startswith("aug_")],key=lambda f: f.lower())
+        self.f_list = [getattr(self, i) for i in f_names]
 
         self.argno = len(self.f_list)
 
@@ -487,38 +471,35 @@ class Augmenter:
     def details(self):
 
         """
-        Prints summary of parameters with which the augmenter was
+        Prints summary of parameters with which the selfmenter was
         initialized.
         """
 
-        exclude_keys = ["f_list", "argno", "randomize_batch"]
-        sum_dict = {
-            k: vars(self)[k]
-            for k in set(list(vars(self).keys())) - set(exclude_keys)
-        }
-
-        print(
-            "Augmenter initialized with the following parameter ranges:"
-        )
-        print("----------")
-        print(
-            "\n".join(
-                "{}: {}".format(k, v) for k, v in sum_dict.items()
-            )
-        )
+        exclude_set = set(["f_list", "argno", "randomize_params","fill_mode"])
+        param_list = sorted(list(set([k for k in vars(self).keys()])-exclude_set),key=lambda f: f.lower())
+        add_list = ["fill_mode","randomize_params"]
+        print("Augmenter initialized with the following parameter ranges:")
+        print("----------------------------------------------------------")
+        for i in param_list:
+            val = str(vars(self)[i])
+            print(f"{i:<20}{val}")
+        print("-")
+        for i in add_list:
+            val = str(vars(self)[i])
+            print(f"{i:<20}{val}")
 
     #     ----------
 
     def aug_rotate(self, img, pre_norm=False):
 
         """
-        Rotates the image by a random angle within the range given.
-        Note: Set pre_norm to True if image has been normalized to [0,1].
+        Rotates the image by a random angle within the range given
+        (set pre_norm to True if image has been normalized to [0,1]).
         """
 
         if self.rotate_range is not None:
             rotate = iaa.Affine(
-                rotate=self.rotate_range, mode=self.edge_mode
+                rotate=self.rotate_range, mode=self.fill_mode
             )
             if pre_norm:
                 img = (img * 255).astype(np.uint8)
@@ -535,13 +516,13 @@ class Augmenter:
 
         """
         Shear-transforms the image by a random angle within the range
-        given.
-        Note: Set pre_norm to True if image has been normalized to [0,1].
+        given (set pre_norm to True if image has been normalized to 
+        [0,1]).
         """
 
         if self.shear_range is not None:
             shear = iaa.Affine(
-                shear=self.shear_range, mode=self.edge_mode
+                shear=self.shear_range, mode=self.fill_mode
             )
             if pre_norm:
                 img = (img * 255).astype(np.uint8)
@@ -557,12 +538,12 @@ class Augmenter:
     def aug_dropout(self, img, pre_norm=False):
 
         """
-        Drops a portion of pixel values to zero.
-        Note: Set pre_norm to True if image has been normalized to [0,1].
+        Drops a portion of pixel values to zero (set pre_norm to True 
+        if image has been normalized to [0,1]).
         """
 
         if self.dropout_pair is not None:
-            if self.randomize_batch == True:
+            if self.randomize_params == True:
                 drop_1 = (
                     np.random.randint(0, self.dropout_pair[0] * 100)
                     / 100
@@ -591,13 +572,13 @@ class Augmenter:
     def aug_x_scale(self, img, pre_norm=False):
 
         """
-        Scales (squashes or stretches) the image on the x-axis by a random
-        amount within the range given.
-        Note: Set pre_norm to True if image has been normalized to [0,1].
+        Scales (squashes or stretches) the image on the x-axis by a 
+        random amount within the range given (set pre_norm to True 
+        if image has been normalized to [0,1]).
         """
 
         if self.x_scale is not None:
-            x_scale = iaa.ScaleX(self.x_scale, mode=self.edge_mode)
+            x_scale = iaa.ScaleX(self.x_scale, mode=self.fill_mode)
             if pre_norm:
                 img = (img * 255).astype(np.uint8)
                 x_scale_img = (x_scale(image=img)) / 255
@@ -612,13 +593,13 @@ class Augmenter:
     def aug_y_scale(self, img, pre_norm=False):
 
         """
-        Scales (squashes or stretches) the image on the y-axis by a random
-        amount within the range given.
-        Note: Set pre_norm to True if image has been normalized to [0,1].
+        Scales (squashes or stretches) the image on the y-axis by a 
+        random amount within the range given (set pre_norm to True 
+        if image has been normalized to [0,1]).
         """
 
         if self.y_scale is not None:
-            y_scale = iaa.ScaleY(self.y_scale, mode=self.edge_mode)
+            y_scale = iaa.ScaleY(self.y_scale, mode=self.fill_mode)
             if pre_norm:
                 img = (img * 255).astype(np.uint8)
                 y_scale_img = (y_scale(image=img)) / 255
@@ -634,13 +615,13 @@ class Augmenter:
 
         """
         Shifts the image on the x-axis by a random amount within the
-        range given.
-        Note: Set pre_norm to True if image has been normalized to [0,1].
+        range given (set pre_norm to True if image has been 
+        normalized to [0,1]).
         """
 
         if self.x_shift is not None:
             x_shift = iaa.TranslateX(
-                percent=self.x_shift, mode=self.edge_mode
+                percent=self.x_shift, mode=self.fill_mode
             )
             if pre_norm:
                 img = (img * 255).astype(np.uint8)
@@ -657,13 +638,13 @@ class Augmenter:
 
         """
         Shifts the image on the y-axis by a random amount within the
-        range given.
-        Note: Set pre_norm to True if image has been normalized to [0,1].
+        range given (set pre_norm to True if image has been 
+        normalized to [0,1]).
         """
 
         if self.y_shift is not None:
             y_shift = iaa.TranslateY(
-                percent=self.y_shift, mode=self.edge_mode
+                percent=self.y_shift, mode=self.fill_mode
             )
             if pre_norm:
                 img = (img * 255).astype(np.uint8)
@@ -680,8 +661,8 @@ class Augmenter:
 
         """
         Applies a CLAH equalization using a random clip limit within
-        the range given.
-        Note: Set pre_norm to True if image has been normalized to [0,1].
+        the range given (set pre_norm to True if image has been 
+        normalized to [0,1]).
         """
 
         if self.clip_limit is not None:
@@ -701,13 +682,13 @@ class Augmenter:
 
         """
         Shifts local pixel areas by a random amount within the range
-        given.
-        Note: Set pre_norm to True if image has been normalized to [0,1].
+        given (set pre_norm to True if image has been normalized 
+        to [0,1]).
         """
 
         if self.pwa_scale is not None:
             pwa = iaa.PiecewiseAffine(
-                scale=self.pwa_scale, mode=self.edge_mode
+                scale=self.pwa_scale, mode=self.fill_mode
             )
             if pre_norm:
                 img = (img * 255).astype(np.uint8)
@@ -723,8 +704,8 @@ class Augmenter:
     def aug_h_flip(self, img, pre_norm=False):
 
         """
-        Flips a random subset of images horizontally.
-        Note: Set pre_norm to True if image has been normalized to [0,1].
+        Flips a random subset of images horizontally (set pre_norm 
+        to True if image has been normalized to [0,1]).
         """
 
         if self.h_flip is not None:
@@ -743,8 +724,8 @@ class Augmenter:
     def aug_v_flip(self, img, pre_norm=False):
 
         """
-        Flipts a random subset of images vertically.
-        Note: Set pre_norm to True if image has been normalized to [0,1].
+        Flipts a random subset of images vertically (set pre_norm 
+        to True if image has been normalized to [0,1]).
         """
 
         if self.v_flip is not None:
@@ -763,13 +744,13 @@ class Augmenter:
     def aug_g_noise(self, img, pre_norm=False):
 
         """
-        Adds Gaussian noise to the image.
-        Note: Set pre_norm to True if image has been normalized to [0,1].
+        Adds Gaussian noise to the image (set pre_norm to True if 
+        image has been normalized to [0,1]).
         """
 
         if self.g_sev is not None:
             rand_sev = np.random.randint(self.g_sev + 1)
-            if self.randomize_batch == True:
+            if self.randomize_params == True:
                 if rand_sev == 0:
                     g_noise = None
                 else:
@@ -797,13 +778,13 @@ class Augmenter:
     def aug_brightness(self, img, pre_norm=False):
 
         """
-        Adjusts brightness of the image.
-        Note: Set pre_norm to True if image has been normalized to [0,1].
+        Adjusts brightness of the image (set pre_norm to True if 
+        image has been normalized to [0,1]).
         """
 
         if self.b_sev is not None:
             rand_sev = np.random.randint(self.b_sev + 1)
-            if self.randomize_batch == True:
+            if self.randomize_params == True:
                 if rand_sev == 0:
                     brightness = None
                 else:
@@ -831,13 +812,13 @@ class Augmenter:
     def aug_elastic(self, img, pre_norm=False):
 
         """
-        Applies elastic transformation to the image.
-        Note: Set pre_norm to True if image has been normalized to [0,1].
+        Applies elastic transformation to the image (set pre_norm 
+        to True if image has been normalized to [0,1]).
         """
 
         if self.e_sev is not None:
             rand_sev = np.random.randint(self.e_sev + 1)
-            if self.randomize_batch == True:
+            if self.randomize_params == True:
                 if rand_sev == 0:
                     elastic = None
                 else:
@@ -865,13 +846,13 @@ class Augmenter:
     def aug_contrast(self, img, pre_norm=False):
 
         """
-        Adusts contrast to a random subset of images.
-        Note: Set pre_norm to True if image has been normalized to [0,1].
+        Adusts contrast to a random subset of images (set pre_norm
+        to True if image has been normalized to [0,1]).
         """
 
         if self.contrast == True:
             contrast = iaa.pillike.EnhanceContrast()
-            if self.randomize_batch == True:
+            if self.randomize_params == True:
                 if np.random.randint(2) == True:
                     if pre_norm:
                         img = (img * 255).astype(np.uint8)
@@ -899,13 +880,13 @@ class Augmenter:
     def aug_sharpness(self, img, pre_norm=False):
 
         """
-        Adjusts sharpness to a random subset of images.
-        Note: Set pre_norm to True if image has been normalized to [0,1].
+        Adjusts sharpness to a random subset of images (set pre_norm 
+        to True if image has been normalized to [0,1]).
         """
 
         if self.sharpness == True:
             sharpness = iaa.pillike.EnhanceSharpness()
-            if self.randomize_batch == True:
+            if self.randomize_params == True:
                 if np.random.randint(2) == True:
                     if pre_norm:
                         img = (img * 255).astype(np.uint8)
@@ -930,17 +911,37 @@ class Augmenter:
 
     #     ----------
 
-    def simple_augment(self, img, pre_norm=False):
+    def simple_augment(self, img, order=None, pre_norm=False):
 
         """
-        Performs the augmentations (for which a parameter was provided)
-        in order.
-        Note: Set pre_norm to True if image has been normalized to [0,1].
+        Performs the augmentations (for which a parameter was provided) in 
+        a particular order.
+        
+        Arguments:
+            img (array): image to augment.
+            
+        Keyword Arguments:
+            order (list) optional: list of indices (integer type) to 
+            determine the order in which the transformation functions are 
+            applied. Note that the transformation functions are ordered 
+            alphabetically by default. Defaults to None.
+            -
+            pre_norm (bool) optional: whether or not the input image 
+            pixel values have been normalized to the range [0,1]. If True,
+            the pixel values will be de-normalized prior to augmentation.
+            Defaults to False.
+            
+        Returns:
+            Augmented image.
         """
         if pre_norm:
             img = (img * 255).astype(np.uint8)
-        order = np.arange(self.argno)
-        for i in order:
+            
+        if order:
+            aug_order = order
+        else:
+            aug_order = np.arange(self.argno)
+        for i in aug_order:
             function = self.f_list[i]
             outp = function(img)
             img = outp
@@ -954,23 +955,39 @@ class Augmenter:
     def random_augment(self, img, full_set=True, pre_norm=False):
 
         """
-        Performs the augmentations (for which a parameter was provided)
-        in a random order.
-        Note: Set pre_norm to True if image has been normalized to [0,1].
+        Performs the augmentations (for which a parameter was provided) in 
+        a random order.
+        
+        Arguments:
+            img (array): image to augment.
+            
+        Keyword Arguments:
+            full_set (bool) optional: whether or not to apply all of the
+            transformation functions for which a parameter was provided in
+            the constructor upon initialization. If False, will apply a 
+            random subset of the transformations. Defaults to True.
+            -
+            pre_norm (bool) optional: whether or not the input image 
+            pixel values have been normalized to the range [0,1]. If True,
+            the pixel values will be de-normalized prior to augmentation.
+            Defaults to False.
+            
+        Returns:
+            Augmented image.
         """
         if pre_norm:
             img = (img * 255).astype(np.uint8)
         if full_set:
-            order = np.random.choice(
+            aug_order = np.random.choice(
                 np.arange(self.argno), size=self.argno, replace=False
             )
         else:
-            order = np.random.choice(
+            aug_order = np.random.choice(
                 np.arange(self.argno),
                 size=np.random.randint(self.argno),
                 replace=False,
             )
-        for i in order:
+        for i in aug_order:
             function = self.f_list[i]
             outp = function(img)
             img = outp
@@ -988,6 +1005,7 @@ class Augmenter:
         n_rows,
         n_cols,
         augment_type="random",
+        order = None,
         pre_norm=False,
     ):
 
@@ -1024,10 +1042,16 @@ class Augmenter:
             for the display. If "simple", the simple_augment method
             will be used. Defaults to "random".
             -
-            pre_norm (bool) optional: whether or not the image data
-            has been normalized to the range [0,1]. If it has, not
-            setting this to True will result in error. Defaults to
-            False. Only relevant for "path" mode.
+            order (list) optional: list of indices (integer type) to 
+            determine the order in which the transformation functions are 
+            applied. Note that the transformation functions are ordered 
+            alphabetically by default. Only relevant if using "simple" 
+            as the "augment_type" (see above). Defaults to None.
+            -
+            pre_norm (bool) optional: whether or not the input image 
+            pixel values have been normalized to the range [0,1]. If True,
+            the pixel values will be de-normalized prior to augmentation.
+            Only relevant if using "path" mode. Defaults to False.
 
         Returns:
             Visualization of randomly augmented image.
@@ -1069,7 +1093,7 @@ class Augmenter:
         ax1.set_yticks([])
         for i in tqdm(range(2, (n_rows * n_cols) + 1)):
             if augment_type == "simple":
-                aug_img = self.simple_augment(img)
+                aug_img = self.simple_augment(img, order=order)
             else:
                 aug_img = self.random_augment(img)
             ax = fig.add_subplot(n_rows, n_cols, i)
@@ -1085,6 +1109,8 @@ class Augmenter:
     def augment_flow(
         self,
         base_path,
+        augment_type="random",
+        order = None,        
         class_selection=None,
         number=None,
         size=None,
@@ -1113,6 +1139,17 @@ class Augmenter:
             class subdirectories.
 
         Keyword Arguments:
+            augment_type (str) optional: either "random" or "simple".
+            If "random", the class' "random_augment" method will be used
+            for the augmentation. If "simple", the "simple_augment" method
+            will be used. Defaults to "random".
+            -
+            order (list) optional: list of indices (integer type) to 
+            determine the order in which the transformation functions are 
+            applied. Note that the transformation functions are ordered 
+            alphabetically by default. Only relevant if using "simple" 
+            as the "augment_type" (see above). Defaults to None.
+            -        
             class_selection (list) optional: list of class names on which
             to perform the augmentation. If not given, will apply to all
             the classes in the dataset. Defaults to None.
@@ -1217,54 +1254,43 @@ class Augmenter:
                             os.mkdir(r + "/" + i)
                         r = r + "/" + i
 
-                for i, j in tqdm(
-                    enumerate(all_aug_indices[0]),
-                    total=len(all_aug_indices[0]),
-                ):
-                    aug_img = self.random_augment(
-                        all_class_arrays[0][j]
-                    )
+                for i, j in tqdm(enumerate(all_aug_indices[0]),total=len(all_aug_indices[0])):
+                    if augment_type == "simple":
+                        aug_img = self.simple_augment(all_class_arrays[0][j],order=order)
+                    else:
+                        aug_img = self.random_augment(all_class_arrays[0][j])
                     imageio.imwrite(f"{r}/aug_{i+1}.jpg", aug_img)
                     aug_imgs.append(aug_img)
                 print("Augmented images saved successfully.")
 
             else:
                 for x in range(len(all_class_arrays)):
-                    for i, j in tqdm(
-                        enumerate(all_aug_indices[x]),
-                        total=len(all_aug_indices[x]),
-                    ):
-                        aug_img = self.random_augment(
-                            all_class_arrays[x][j]
-                        )
-                        imageio.imwrite(
-                            f"{base_path}/{class_list[x]}/{class_list[x]}_aug_{i+1}.jpg",
-                            aug_img,
-                        )
+                    for i, j in tqdm(enumerate(all_aug_indices[x]),total=len(all_aug_indices[x])):
+                        if augment_type == "simple":
+                            aug_img = self.simple_augment(all_class_arrays[x][j],order=order)
+                        else:
+                            aug_img = self.random_augment(all_class_arrays[x][j])
+                        imageio.imwrite(f"{base_path}/{class_list[x]}/{class_list[x]}_aug_{i+1}.jpg",aug_img)
                         aug_imgs.append(aug_img)
                 print(
                     "Augmented images saved successfully in class subdirectories."
                 )
         else:
             if no_class == True:
-                for i, j in tqdm(
-                    enumerate(all_aug_indices[0]),
-                    total=len(all_aug_indices[0]),
-                ):
-                    aug_img = self.random_augment(
-                        all_class_arrays[0][j]
-                    )
+                for i, j in tqdm(enumerate(all_aug_indices[0]),total=len(all_aug_indices[0])):
+                    if augment_type == "simple":
+                        aug_img = self.simple_augment(all_class_arrays[0][j],order=order)
+                    else:                    
+                        aug_img = self.random_augment(all_class_arrays[0][j])
                     aug_imgs.append(aug_img)
 
             else:
                 for x in range(len(all_class_arrays)):
-                    for i, j in tqdm(
-                        enumerate(all_aug_indices[x]),
-                        total=len(all_aug_indices[x]),
-                    ):
-                        aug_img = self.random_augment(
-                            all_class_arrays[x][j]
-                        )
+                    for i, j in tqdm(enumerate(all_aug_indices[x]),total=len(all_aug_indices[x])):
+                        if augment_type == "simple":
+                            aug_img = self.simple_augment(all_class_arrays[x][j],order=order)
+                        else:
+                            aug_img = self.random_augment(all_class_arrays[x][j])
                         aug_imgs.append(aug_img)
 
             return np.array(aug_imgs)
