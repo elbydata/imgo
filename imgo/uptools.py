@@ -311,7 +311,7 @@ def read_img_df(df, img_scale=None, class_name=None, save=False):
         images)
 
     Keyword Arguments:
-        img_scale (int) optional: dimensions for desired (square) output 
+        img_scale (int) optional: dimensions for desired (square) output
         images. If None, no resizing will occur. Defaults to None.
         -
         class_name (str) optional: name of a class in the DataFrame. If
@@ -453,10 +453,10 @@ def one_hot_encode(y_data, class_list, save=False):
 def auto_rescale(img, dim):
 
     """
-    Rescales image to a square of n-by-n pixels, where n is the integer 
-    value given by the 'dim' argument. Rescaling is performed with cv2 
-    'inter cubic' interpolation if the original dimensions are smaller than 
-    the target dimensions, and cv2 'inter area' interpolation if the 
+    Rescales image to a square of n-by-n pixels, where n is the integer
+    value given by the 'dim' argument. Rescaling is performed with cv2
+    'inter cubic' interpolation if the original dimensions are smaller than
+    the target dimensions, and cv2 'inter area' interpolation if the
     original dimensions are greater than the target dimensions.
 
     Arguments:
@@ -474,9 +474,13 @@ def auto_rescale(img, dim):
     scale = (dim, dim)
 
     if raw_dims < dim:
-        scaled_img = cv2.resize(img, scale, interpolation=cv2.INTER_CUBIC)
+        scaled_img = cv2.resize(
+            img, scale, interpolation=cv2.INTER_CUBIC
+        )
     else:
-        scaled_img = cv2.resize(img, scale, interpolation=cv2.INTER_AREA)
+        scaled_img = cv2.resize(
+            img, scale, interpolation=cv2.INTER_AREA
+        )
 
     return scaled_img
 
@@ -485,140 +489,158 @@ def auto_rescale(img, dim):
 
 
 def threshold_rescale(img, lower=None, upper=None):
-    
+
     """
     Rescales image to a square of n-by-n pixels if the square root of the
-    product of the image dimensions are lower or higher than the 
+    product of the image dimensions are lower or higher than the
     respective threshold values given by the 'lower' and 'upper' arguments.
-    Rescaling is performed with cv2 'inter cubic' interpolation if the 
-    original dimensions are smaller than the target dimensions, and cv2 
-    'inter area' interpolation if the original dimensions are greater than 
+    Rescaling is performed with cv2 'inter cubic' interpolation if the
+    original dimensions are smaller than the target dimensions, and cv2
+    'inter area' interpolation if the original dimensions are greater than
     the target dimensions.
 
     Arguments:
         img (numpy-array): original image to rescale.
-    
+
     Keyword Arguments:
-        lower (int) optional: the lower bound of the threshold. Defaults 
+        lower (int) optional: the lower bound of the threshold. Defaults
         to None.
         -
-        uppper (int) optional: the upper bound of the threshold. Defaults 
-        to None.        
+        uppper (int) optional: the upper bound of the threshold. Defaults
+        to None.
 
     Returns:
         scaled_img (numpy-array): image rescaled into square of length and
         height equal to 'lower' or 'upper', depending on which is given.
-    """   
-    
-    img_dim = np.sqrt(img.shape[0]*img.shape[1])
-    
+    """
+
+    img_dim = np.sqrt(img.shape[0] * img.shape[1])
+
     if (lower is not None) and (upper is None):
         if img_dim < lower:
-            scaled_img = cv2.resize(img, (lower,lower), interpolation=cv2.INTER_CUBIC)
+            scaled_img = cv2.resize(
+                img, (lower, lower), interpolation=cv2.INTER_CUBIC
+            )
         else:
             scaled_img = img
     elif (lower is None) and (upper is not None):
         if img_dim > upper:
-            scaled_img = cv2.resize(img, (upper,upper), interpolation=cv2.INTER_AREA)
+            scaled_img = cv2.resize(
+                img, (upper, upper), interpolation=cv2.INTER_AREA
+            )
         else:
             scaled_img = img
     elif (lower is not None) and (upper is not None):
         if img_dim < lower:
-            scaled_img = cv2.resize(img, (lower,lower), interpolation=cv2.INTER_CUBIC)        
+            scaled_img = cv2.resize(
+                img, (lower, lower), interpolation=cv2.INTER_CUBIC
+            )
         elif img_dim > upper:
-            scaled_img = cv2.resize(img, (upper,upper), interpolation=cv2.INTER_AREA)
+            scaled_img = cv2.resize(
+                img, (upper, upper), interpolation=cv2.INTER_AREA
+            )
         else:
-            scaled_img = img  
+            scaled_img = img
     else:
         scaled_img = img
-        
+
     return scaled_img
 
 
 # ------------------------------------------------------------------------
 
 
-def rescale_flow(base_path,
-                 rescale_mode,
-                 dim=None,
-                 lower=None,
-                 upper=None,
-                 class_selection=None,
-                 save=False):
-    
+def rescale_flow(
+    base_path,
+    rescale_mode,
+    dim=None,
+    lower=None,
+    upper=None,
+    class_selection=None,
+    save=False,
+):
+
     """
     Fetches images and class names from subdirectories in the directory
-    given as the base path and rescales the images using either the 
+    given as the base path and rescales the images using either the
     'auto_rescale' or the 'threshold_rescale' function, with the option
     to save the rescaled images in place of the original images.
-    
+
     Arguments:
         base_path (str): path to the directory containing images or class
         subdirectories.
         -
-        rescale_mode (str): which rescale function to use; either 'auto' 
+        rescale_mode (str): which rescale function to use; either 'auto'
         or 'threshold'.
-        
+
     Keyword Arguments:
         dim (int) optional: number of pixels in the target dimensions.
         Defaults to None.
         -
-        lower (int) optional: the lower bound of the threshold. Defaults 
+        lower (int) optional: the lower bound of the threshold. Defaults
         to None.
         -
-        uppper (int) optional: the upper bound of the threshold. Defaults 
+        uppper (int) optional: the upper bound of the threshold. Defaults
         to None.
         -
         class_selection (list) optional: list of class names on which
-        to perform the rescaling. If not given, will apply to all the 
+        to perform the rescaling. If not given, will apply to all the
         identified in the directories. Defaults to None.
         -
-        save (bool) optional: whether or not to save the rescaled images 
-        in the directories from which they were drawn. Note that saving 
+        save (bool) optional: whether or not to save the rescaled images
+        in the directories from which they were drawn. Note that saving
         will overwrite the original images. Defaults to None.
-        
+
     Returns:
         X (numpy-array): images in array form (if 'save' is False).
         -
         y (numpy-array): one-hot encoded label data (if 'save' is False).
     """
-    
-    if rescale_mode not in ["auto","threshold"]:
-        raise Exception("Choose valid rescale mode: 'auto' or 'threshold'.")
-        
+
+    if rescale_mode not in ["auto", "threshold"]:
+        raise Exception(
+            "Choose valid rescale mode: 'auto' or 'threshold'."
+        )
+
     df = img_to_df(base_path)
     scaled_imgs = []
     scaled_imgs_labels = []
-    
+
     if class_selection:
         if type(class_selection) is not list:
-            raise Exception(f"Class selection must be a list; {type(class_selection)} given.")
+            raise Exception(
+                f"Class selection must be a list; {type(class_selection)} given."
+            )
         else:
-            df = df.loc[df["class"].isin(class_selection)]    
-    
-    class_list = sorted(list(df["class"].unique()),key=lambda f: f.lower())
-    
+            df = df.loc[df["class"].isin(class_selection)]
+
+    class_list = sorted(
+        list(df["class"].unique()), key=lambda f: f.lower()
+    )
+
     for i, j in tqdm(df.iterrows(), total=len(df)):
-        
+
         img = imageio.imread(j[0])
         if rescale_mode == "auto":
-            scaled_img = auto_rescale(img,dim)
+            scaled_img = auto_rescale(img, dim)
         elif rescale_mode == "threshold":
-            scaled_img = threshold_rescale(img,lower=lower,upper=upper)
+            scaled_img = threshold_rescale(
+                img, lower=lower, upper=upper
+            )
         else:
             scaled_img = img
-        
+
         if save:
-            imageio.imwrite(j[0],scaled_img)
+            imageio.imwrite(j[0], scaled_img)
         else:
             scaled_imgs.append(scaled_img)
             scaled_imgs_labels.append(j[1])
-            
+
     if not save:
-        
+
         X = np.array(scaled_imgs)
-        y = one_hot_encode(scaled_imgs_labels,class_list)
-        
+        y = one_hot_encode(scaled_imgs_labels, class_list)
+
         return X, y
 
 
@@ -1759,12 +1781,14 @@ class Image_Dataset:
 
     #     ----------
 
-    def augment_training_set(self,
-                             augmenter,
-                             portion,
-                             augment_type="random",
-                             order = None,
-                             inplace=False):
+    def augment_training_set(
+        self,
+        augmenter,
+        portion,
+        augment_type="random",
+        order=None,
+        inplace=False,
+    ):
 
         """
         Calls on an (initialized) imgo.augtools augmenter to apply image
@@ -1783,12 +1807,12 @@ class Image_Dataset:
             for the augmentation. If "simple", the "simple_augment" method
             will be used. Defaults to "random".
             -
-            order (list) optional: list of indices (integer type) to 
-            determine the order in which the transformation functions are 
-            applied. Note that the transformation functions are ordered 
-            alphabetically by default. Only relevant if using "simple" 
+            order (list) optional: list of indices (integer type) to
+            determine the order in which the transformation functions are
+            applied. Note that the transformation functions are ordered
+            alphabetically by default. Only relevant if using "simple"
             as the "augment_type" (see above). Defaults to None.
-            -          
+            -
             inplace (bool) optional: whether or not to replace the images
             in the Image_Dataset's X_train subset with the augmented
             images. If True, the 'X_train' attribute will be changed. If
@@ -1833,9 +1857,13 @@ class Image_Dataset:
             for x in tqdm(np.arange(self.shadow["train"][0].shape[0])):
                 if x in img_indices:
                     if augment_type == "simple":
-                        aug_img = augmenter.simple_augment(self.shadow["train"][0][x],order=order)
+                        aug_img = augmenter.simple_augment(
+                            self.shadow["train"][0][x], order=order
+                        )
                     else:
-                        aug_img = augmenter.random_augment(self.shadow["train"][0][x])
+                        aug_img = augmenter.random_augment(
+                            self.shadow["train"][0][x]
+                        )
                     X_train_aug.append(aug_img)
                 else:
                     X_train_aug.append(self.shadow["train"][0][x])
