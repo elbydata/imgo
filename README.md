@@ -16,7 +16,7 @@ Imgo is composed of two distinct but related modules: **uptools** and **augtools
  - Converting image datasets into numpy-arrays
  - One-hot-encoding label data
  - Splitting image datasets into training, validation, and testing subsets
- - Merging data subsets into single dataset
+ - Merging data subsets into a single dataset
  - Saving numpy-arrays as images in class subdirectories
  
 ![imgo_up_demo](aux/imgo_up_demo.jpg)
