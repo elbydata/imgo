@@ -19,6 +19,8 @@ Imgo is composed of two distinct but related modules: **uptools** and **augtools
  - Merging data subsets into single dataset
  - Saving numpy-arrays as images in class subdirectories
  
+![imgo_up_demo](aux/imgo_up_demo.jpg)
+ 
 **Augtools** allows the user to quickly and efficiently apply augmentation to image data. With Augtools, users can perform the following augmentation tasks using very few lines of code:
 
  - Apply a powerful collection of transformation and corruption functions
@@ -26,8 +28,6 @@ Imgo is composed of two distinct but related modules: **uptools** and **augtools
  - Save augmented images in class subdirectories
  - Augment entire image datasets
  - Augment training data in place in preparation for machine learning projects
- 
-Here is a sample image augmented using Imgo:
 
 ![imgo_aug_demo](aux/imgo_aug_demo.jpg)
 
