@@ -1,6 +1,6 @@
 # IMGO
 
-## Compile, Process, and Augment Image Data
+## Compile, Process, Balance, and Augment Image Data
 
 This library is designed to facilitate the preprocessing phase of image classification projects. 
 
@@ -28,6 +28,7 @@ Imgo is composed of two distinct but related modules: **uptools** and **augtools
  - Save augmented images in class subdirectories
  - Augment entire image datasets
  - Augment training data in place in preparation for machine learning projects
+ - Rebalance class sizes by generating new training images
 
 ![imgo_aug_demo](aux/imgo_aug_demo.jpg)
 
@@ -58,4 +59,4 @@ The project is licensed under the MIT license.
 
 ### Acknowledgements
 
-The **augtools** library is built as a wrapper around **Imgaug**, a powerful image augmentation library. For more information, please see https://imgaug.readthedocs.io/en/latest/.
+Some of the **augtools** library is built as a wrapper around **Imgaug**, a powerful image augmentation library. For more information, please see https://imgaug.readthedocs.io/en/latest/.

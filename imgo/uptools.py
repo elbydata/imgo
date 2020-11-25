@@ -3,7 +3,7 @@ IMGO - Compile, process, and augment image data.
 -------------------------------------------------
 UPTOOLS module: 
 
-Last updated: version 2.2.0
+Last updated: version 2.3.1
 
 Classes
 -------
@@ -96,6 +96,12 @@ of X (square image data) and y (label data) arrays.
         augment_training_set: calls on an (initialized) imgo.augtools 
         augmenter to apply image augmentation to the Image_Dataset's 
         X_train subset.
+        -
+        split_rebalance: splits dataset into training and testing 
+        (and validation) subsets and rebalances class sizes by calling 
+        on an (initialized) imgo.augtools augmenter to generate new 
+        training images (without affecting the validation/testing 
+        subsets).
                
         
 Module-Wide Functions
@@ -1032,7 +1038,6 @@ class Image_Dataset:
         min_pv = None
         max_pv = None
 
-        total_imgs = 0
         for k, v in X_sets.items():
             if combo_sets[k][0] is not None:
                 for i in tqdm(
@@ -1060,10 +1065,8 @@ class Image_Dataset:
 
                     if self.mode == "imgs":
                         img = raw_img
-                        total_imgs += 1
-                    else:
-                        total_imgs += 1
 
+                    else:
                         if rescale_dims:
                             img = auto_rescale(raw_img, rescale_dims)
                             self.dims = (rescale_dims, rescale_dims)
@@ -1171,7 +1174,17 @@ class Image_Dataset:
             self.min_pv = min_pv
             self.max_pv = max_pv
 
-        self.size = total_imgs
+        if self.split == 0:
+            self.size = self.y_data.shape[0]
+        elif self.split == 1:
+            self.size = self.y_train.shape[0] + self.y_test.shape[0]
+        else:
+            self.size = (
+                self.y_train.shape[0]
+                + self.y_val.shape[0]
+                + self.y_test.shape[0]
+            )
+
         print("Image_Datset initialized successfully.")
 
     #     ----------
@@ -1227,6 +1240,7 @@ class Image_Dataset:
         if plot:
 
             ldf = pd.DataFrame(labs_nums, columns=df_cols).fillna(0)
+            ldf = ldf.iloc[::-1]
 
             plt.rcParams["font.family"] = "sans-serif"
             plt.rcParams["font.sans-serif"] = "Helvetica"
@@ -1279,7 +1293,7 @@ class Image_Dataset:
     def map_classes(self, class_list):
 
         """
-        Maps class names from a new list of classes.
+        Maps class names from a given list of class names.
         """
 
         if type(class_list) is list:
@@ -1342,7 +1356,10 @@ class Image_Dataset:
             )
         else:
 
-            if type(split_ratio) is tuple:
+            if (type(split_ratio) is list) or (
+                type(split_ratio) is tuple
+            ):
+                split_ratio = [np.round(i, 2) for i in split_ratio]
                 if sum(split_ratio) == 1:
                     print("Splitting...")
                     if len(split_ratio) == 3:
@@ -1443,7 +1460,7 @@ class Image_Dataset:
                         self.split = 1
                     else:
                         raise Exception(
-                            "'split_ratio' argument must be tuple of 2 or 3 floats."
+                            "'split_ratio' argument must be list or tuple of 2 or 3 floats."
                         )
                 else:
                     raise Exception(
@@ -1451,7 +1468,7 @@ class Image_Dataset:
                     )
             else:
                 raise Exception(
-                    f"'split_ratio' argument must be tuple, {type(split_ratio)} given."
+                    f"'split_ratio' argument must be list or tuple, {type(split_ratio)} given."
                 )
 
             subsets = self.shadow
@@ -1783,11 +1800,11 @@ class Image_Dataset:
 
     def augment_training_set(
         self,
-        augmenter,
         portion,
+        augmenter=None,
+        augment_scale=None,
         augment_type="random",
         order=None,
-        inplace=False,
     ):
 
         """
@@ -1795,29 +1812,30 @@ class Image_Dataset:
         augmentation to the Image_Dataset's X_train subset.
 
         Arguments:
-            augmenter (imgo.uptools Augmenter object): the augmenter to
-            apply to the images.
-            -
             portion (float): float within the range [0,1]. This is the
             portion of images in the set that will be augmented.
 
         Keyword Arguments:
+            augmenter (imgo.uptools Augmenter object) optional: the
+            augmenter to apply to the images. Defaults to None.
+            -
+            augment_scale (int) optional: square dimensions to which the
+            images are temporarily rescaled prior to augmentation (note
+            that larger values result in better quality augmentations).
+            The images will be rescaled back to their previous (square)
+            dimensions after augmentation. Defaults to None.
+            -
             augment_type (str) optional: either "random" or "simple".
             If "random", the class' "random_augment" method will be used
             for the augmentation. If "simple", the "simple_augment" method
-            will be used. Defaults to "random".
+            will be used. If None, "random_augment" is used. Defaults to
+            None.
             -
             order (list) optional: list of indices (integer type) to
             determine the order in which the transformation functions are
             applied. Note that the transformation functions are ordered
             alphabetically by default. Only relevant if using "simple"
             as the "augment_type" (see above). Defaults to None.
-            -
-            inplace (bool) optional: whether or not to replace the images
-            in the Image_Dataset's X_train subset with the augmented
-            images. If True, the 'X_train' attribute will be changed. If
-            False, will return a new numpy-array featuring the augmented
-            images.
 
         Returns:
             X_train_aug (numpy-array): the Image_Dataset's X_train object
@@ -1850,35 +1868,445 @@ class Image_Dataset:
                     "Portion argument must be in range [0,1]."
                 )
 
-            if self.reduce == "std":
-                raise Exception("Cannot augment standardized data.")
-
             X_train_aug = []
             for x in tqdm(np.arange(self.shadow["train"][0].shape[0])):
                 if x in img_indices:
-                    if augment_type == "simple":
-                        aug_img = augmenter.simple_augment(
-                            self.shadow["train"][0][x], order=order
+                    if augment_scale:
+                        scaled_img = auto_rescale(
+                            self.shadow["train"][0][x], augment_scale
+                        )
+                        if augment_type == "simple":
+                            aug_scaled_img = augmenter.simple_augment(
+                                scaled_img, order=order
+                            )
+                        else:
+                            aug_scaled_img = augmenter.random_augment(
+                                scaled_img
+                            )
+                        aug_img = auto_rescale(
+                            aug_scaled_img, self.dims[0]
                         )
                     else:
-                        aug_img = augmenter.random_augment(
-                            self.shadow["train"][0][x]
-                        )
+                        if augment_type == "simple":
+                            aug_img = augmenter.simple_augment(
+                                self.shadow["train"][0][x], order=order
+                            )
+                        else:
+                            aug_img = augmenter.random_augment(
+                                self.shadow["train"][0][x]
+                            )
                     X_train_aug.append(aug_img)
                 else:
                     X_train_aug.append(self.shadow["train"][0][x])
 
-            if self.reduce == "norm":
-                if inplace:
-                    self.shadow["train"][0] = (
-                        np.array(X_train_aug) / 255
+            self.shadow["train"][0] = np.array(X_train_aug)
+
+            if self.reduce == "std":
+                if self.dims == "various":
+                    raise Exception(
+                        "Cannot standardize data if image dimensions are not the same."
                     )
-                    self.X_train = self.shadow["train"][0]
                 else:
-                    return np.array(X_train_aug) / 255
+                    print("Standardizing...")
+                    self.mu = (
+                        np.sum(self.shadow["train"][0])
+                        / self.shadow["train"][0].size
+                    )
+                    self.sigma = np.sqrt(
+                        np.sum((self.shadow["train"][0] - self.mu) ** 2)
+                        / self.shadow["train"][0].size
+                    )
+
+                    for k, v in self.shadow.items():
+                        if v[0] is None:
+                            setattr(self, f"X_{k}", None)
+                        else:
+                            setattr(
+                                self,
+                                f"X_{k}",
+                                (v[0] - self.mu) / self.sigma,
+                            )
+                        if v[1] is None:
+                            setattr(self, f"y_{k}", None)
+                        else:
+                            setattr(self, f"y_{k}", v[1])
+
+                    self.min_pv = (self.min_pv - self.mu) / self.sigma
+                    self.max_pv = (self.max_pv - self.mu) / self.sigma
+
+            if self.reduce == "norm":
+                print("Normalizing...")
+                self.X_train = self.shadow["train"][0] / 255
+
             else:
-                if inplace:
-                    self.shadow["train"][0] = np.array(X_train_aug)
-                    self.X_train = self.shadow["train"][0]
+                self.X_train = self.shadow["train"][0]
+
+    #     ----------
+
+    def split_rebalance(
+        self,
+        split_ratio,
+        augmenter=None,
+        augment_scale=None,
+        augment_type=None,
+        order=None,
+        force=False,
+    ):
+
+        """
+        Splits dataset into training and testing (and validation) subsets
+        and rebalances class sizes by calling on an (initialized)
+        imgo.augtools augmenter to generate new training images (without
+        affecting the validation/testing subsets). The number of images
+        generated for each class will depend on the ratios given by the
+        'split_ratio' argument as well as the number of images already
+        included in each class. The number of new images will be maximum
+        possible such that the ratios are preserved and that at the total
+        of the training and validation subsets are no larger than half of
+        the smallest class.
+
+        Arguments:
+            split_ratio (tuple): ratios in the form (a, b, c) used
+            to split the dataset; where a, b, and c are float values
+            representing the desired proportions of training,
+            validation, and testing subsets, repectively; and
+            a + b + c = 1. If only two values are given, ie in the
+            form (a, b); the dataset will be split into training and
+            testing subsets only. In this case, a + b must be equal
+            to 1. The number of images generated by the augmenter will
+            depend on the ratios given as well as the number of images
+            in each class.
+
+        Keyword Arguments:
+            augmenter (imgo.uptools Augmenter object) optional: the
+            augmenter to apply to the images. Defaults to None.
+            -
+            augment_scale (int) optional: square dimensions to which the
+            images are temporarily rescaled prior to augmentation (note
+            that larger values result in better quality augmentations).
+            The images will be rescaled back to their previous (square)
+            dimensions after augmentation. Defaults to None.
+            -
+            augment_type (str) optional: either "random" or "simple".
+            If "random", the class' "random_augment" method will be used
+            for the augmentation. If "simple", the "simple_augment" method
+            will be used. If None, "random_augment" is used. Defaults to
+            None.
+            -
+            order (list) optional: list of indices (integer type) to
+            determine the order in which the transformation functions are
+            applied. Note that the transformation functions are ordered
+            alphabetically by default. Only relevant if using "simple"
+            as the "augment_type" (see above). Defaults to None.
+            -
+            force (bool) optional: whether or not to force the method to
+            apply augmentation to datasets that are already balanced. The
+            method will check if the classes are already balanced and
+            raise an exception if not set to 'True'. Defaults to False.
+
+        Returns:
+            X_train_aug (numpy-array): the Image_Dataset's X_train object
+            with augmented images (if inplace argument set to False).
+
+        Yields:
+            Augmented images (in numpy-array form) as the 'X_train'
+            attribute of the Image_Dataset object (if inplace argument
+            set to True).
+        """
+
+        from imgo import augtools
+
+        if (type(split_ratio) is list) or (type(split_ratio) is tuple):
+            split_ratio = [np.round(i, 2) for i in split_ratio]
+            if np.round(sum(split_ratio), 2) == 1:
+                if len(split_ratio) == 3:
+                    tr_r = split_ratio[0]
+                    va_r = split_ratio[1]
+                    te_r = split_ratio[2]
+                    vt_r = split_ratio[1] + split_ratio[2]
+                elif len(split_ratio) == 2:
+                    tr_r = split_ratio[0]
+                    va_r = 0
+                    te_r = split_ratio[1]
+                    vt_r = split_ratio[1]
                 else:
-                    return np.array(X_train_aug)
+                    raise Exception(
+                        "'split_ratio' argument must be list or tuple of 2 or 3 floats."
+                    )
+            else:
+                raise Exception("'split_ratio' argument must sum to 1.")
+        else:
+            raise Exception(
+                f"'split_ratio' argument must be list or tuple, {type(split_ratio)} given."
+            )
+
+        if self.split != 0:
+            raise Exception(
+                "Cannot split dataset that has already been split."
+            )
+
+        else:
+
+            indices = {}
+            for i in self.class_list:
+                indices[i] = {
+                    "imgs": [],
+                    "to_bal": [],
+                    "to_rem": [],
+                    "valtest": [],
+                    "val": [],
+                    "test": [],
+                }
+
+            for i in np.arange(self.shadow["data"][1].shape[0]):
+                for c in indices.keys():
+                    if (
+                        self.class_list[
+                            np.argmax(self.shadow["data"][1][i], axis=0)
+                        ]
+                        == c
+                    ):
+                        indices[c]["imgs"].append(i)
+            lens = []
+            for c in indices.keys():
+                lens.append(len(indices[c]["imgs"]))
+            if all(i == lens[0] for i in lens):
+                if not force:
+                    raise Exception(
+                        "Classes already appear to be balanced, set 'force' to 'True' to rebalance."
+                    )
+                else:
+                    pass
+
+            min_class_size = np.min(
+                [len(indices[c]["imgs"]) for c in indices.keys()]
+            )
+            max_vt_size = int((min_class_size / 2) // 1)
+            max_tr_size = int(((max_vt_size / vt_r) * tr_r) // 1)
+            max_total_size = max_vt_size + max_tr_size
+
+            train_indices = []
+            val_indices = []
+            test_indices = []
+
+            for c in indices.keys():
+                indices[c]["valtest"] = list(
+                    np.random.choice(
+                        indices[c]["imgs"],
+                        size=max_vt_size,
+                        replace=False,
+                    )
+                )
+                indices[c]["val"] = list(
+                    np.random.choice(
+                        indices[c]["valtest"],
+                        size=int((max_total_size * (va_r)) // 1),
+                        replace=False,
+                    )
+                )
+                indices[c]["test"] = [
+                    i
+                    for i in indices[c]["valtest"]
+                    if i not in indices[c]["val"]
+                ]
+                for i in indices[c]["valtest"]:
+                    indices[c]["imgs"].remove(i)
+                val_indices += indices[c]["val"]
+                test_indices += indices[c]["test"]
+
+            bal_indices = []
+
+            for c in indices.keys():
+                class_tr_size = len(indices[c]["imgs"])
+
+                inds = []
+
+                dif = np.abs(class_tr_size - max_tr_size)
+                passes = np.divmod(dif, class_tr_size)
+
+                for i in range(passes[0]):
+                    inds += list(
+                        np.random.choice(
+                            indices[c]["imgs"],
+                            size=class_tr_size,
+                            replace=False,
+                        )
+                    )
+                inds += list(
+                    np.random.choice(
+                        indices[c]["imgs"],
+                        size=passes[1],
+                        replace=False,
+                    )
+                )
+
+                if class_tr_size > max_tr_size:
+                    indices[c]["to_rem"] = inds
+                    for i in indices[c]["to_rem"]:
+                        indices[c]["imgs"].remove(i)
+
+                else:
+                    indices[c]["to_bal"] = inds
+                    bal_indices += indices[c]["to_bal"]
+
+                train_indices += indices[c]["imgs"]
+
+            X_train = []
+            y_train = []
+            X_val = []
+            y_val = []
+            X_test = []
+            y_test = []
+
+            data_range = np.arange(self.shadow["data"][1].shape[0])
+            shuffle = np.random.choice(
+                data_range, size=data_range.shape[0], replace=False
+            )
+
+            for i in shuffle:
+                img = self.shadow["data"][0][i]
+                label = self.shadow["data"][1][i]
+
+                if i in train_indices:
+                    X_train.append(img)
+                    y_train.append(label)
+                if i in val_indices:
+                    X_val.append(img)
+                    y_val.append(label)
+                elif i in test_indices:
+                    X_test.append(img)
+                    y_test.append(label)
+
+            for i in tqdm(
+                bal_indices,
+                total=len(bal_indices),
+                desc="Rebalancing",
+                position=0,
+            ):
+
+                img = self.shadow["data"][0][i]
+                label = self.shadow["data"][1][i]
+
+                if augment_scale:
+                    scaled_img = auto_rescale(img, augment_scale)
+
+                    if augment_type == "simple":
+                        aug_scaled_img = augmenter.simple_augment(
+                            scaled_img, order=order
+                        )
+                    else:
+                        aug_scaled_img = augmenter.random_augment(
+                            scaled_img
+                        )
+
+                    aug_img = auto_rescale(aug_scaled_img, self.dims[0])
+
+                else:
+                    if augment_type == "simple":
+                        aug_img = augmenter.simple_augment(
+                            img, order=order
+                        )
+                    else:
+                        aug_img = augmenter.random_augment(img)
+
+                X_train.append(aug_img)
+                y_train.append(label)
+
+                X_train_array = np.array(X_train)
+                y_train_array = np.array(y_train)
+
+                data_range_2 = np.arange(y_train_array.shape[0])
+                shuffle_2 = np.random.choice(
+                    data_range_2,
+                    size=data_range_2.shape[0],
+                    replace=False,
+                )
+
+            self.shadow["train"][0] = X_train_array[shuffle_2]
+            self.shadow["train"][1] = y_train_array[shuffle_2]
+            if len(split_ratio) == 3:
+                self.shadow["val"][0] = np.array(X_val)
+                self.shadow["val"][1] = np.array(y_val)
+                self.shadow["test"][0] = np.array(X_test)
+                self.shadow["test"][1] = np.array(y_test)
+                self.split = 2
+            if len(split_ratio) == 2:
+                self.shadow["val"][0] = None
+                self.shadow["val"][1] = None
+                self.shadow["test"][0] = np.array(X_val + X_test)
+                self.shadow["test"][1] = np.array(y_val + y_test)
+                self.split = 1
+            self.shadow["data"][0] = None
+            self.shadow["data"][1] = None
+
+            subsets = self.shadow
+
+            if self.reduce == "std":
+                if self.dims == "various":
+                    raise Exception(
+                        "Cannot standardize data if image dimensions are not the same."
+                    )
+                else:
+                    print("Standardizing...")
+                    self.mu = (
+                        np.sum(subsets["train"][0])
+                        / subsets["train"][0].size
+                    )
+                    self.sigma = np.sqrt(
+                        np.sum((subsets["train"][0] - self.mu) ** 2)
+                        / subsets["train"][0].size
+                    )
+                    for k, v in subsets.items():
+                        if v[0] is None:
+                            setattr(self, f"X_{k}", None)
+                        else:
+                            setattr(
+                                self,
+                                f"X_{k}",
+                                (v[0] - self.mu) / self.sigma,
+                            )
+                        if v[1] is None:
+                            setattr(self, f"y_{k}", None)
+                        else:
+                            setattr(self, f"y_{k}", v[1])
+
+                    self.min_pv = (self.min_pv - self.mu) / self.sigma
+                    self.max_pv = (self.max_pv - self.mu) / self.sigma
+
+            elif self.reduce == "norm":
+                print("Normalizing...")
+                for k, v in subsets.items():
+                    if v[0] is None:
+                        setattr(self, f"X_{k}", None)
+                    else:
+                        setattr(self, f"X_{k}", v[0] / 255)
+                    if v[1] is None:
+                        setattr(self, f"y_{k}", None)
+                    else:
+                        setattr(self, f"y_{k}", v[1])
+
+            else:
+                for k, v in subsets.items():
+                    if v[0] is None:
+                        setattr(self, f"X_{k}", None)
+                    else:
+                        setattr(self, f"X_{k}", v[0])
+                    if v[1] is None:
+                        setattr(self, f"y_{k}", None)
+                    else:
+                        setattr(self, f"y_{k}", v[1])
+
+            if self.split == 1:
+                print(
+                    "Data sucessfully rebalanced and split into training and testing subsets."
+                )
+                self.size = self.y_train.shape[0] + self.y_test.shape[0]
+            elif self.split == 2:
+                print(
+                    "Data sucessfully rebalanced and split into training, validation, and testing subsets."
+                )
+                self.size = (
+                    self.y_train.shape[0]
+                    + self.y_val.shape[0]
+                    + self.y_test.shape[0]
+                )

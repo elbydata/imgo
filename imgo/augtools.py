@@ -3,7 +3,7 @@ IMGO - Compile, process, and augment image data.
 -------------------------------------------------
 AUGTOOLS module: 
 
-Last updated: version 2.2.0
+Last updated: version 2.3.1
 
 Classes
 -------        
@@ -1019,7 +1019,7 @@ class Augmenter:
         source,
         n_rows,
         n_cols,
-        augment_type="random",
+        augment_type=None,
         order=None,
         pre_norm=False,
     ):
@@ -1055,7 +1055,8 @@ class Augmenter:
             augment_type (str) optional: either "random" or "simple".
             If "random", the class' random_augment method will be used
             for the display. If "simple", the simple_augment method
-            will be used. Defaults to "random".
+            will be used. If None, "random_augment" is used. Defaults to
+            None.
             -
             order (list) optional: list of indices (integer type) to
             determine the order in which the transformation functions are
@@ -1124,7 +1125,7 @@ class Augmenter:
     def augment_flow(
         self,
         base_path,
-        augment_type="random",
+        augment_type=None,
         order=None,
         class_selection=None,
         number=None,
@@ -1157,7 +1158,8 @@ class Augmenter:
             augment_type (str) optional: either "random" or "simple".
             If "random", the class' "random_augment" method will be used
             for the augmentation. If "simple", the "simple_augment" method
-            will be used. Defaults to "random".
+            will be used. If None, "random_augment" is used. Defaults to
+            None.
             -
             order (list) optional: list of indices (integer type) to
             determine the order in which the transformation functions are
