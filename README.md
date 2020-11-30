@@ -1,12 +1,12 @@
 # IMGO
 
-## Compile, Process, Balance, and Augment Image Data
+## Process, Augment, and Balance Image Data
 
 This library is designed to facilitate the preprocessing phase of image classification projects. 
 
 ### Features:
 
-Imgo is composed of two distinct but related modules: **uptools** and **augtools**.
+Imgo is composed of two modules: **uptools** and **augtools**.
 
 **Uptools** helps to streamline various image data preprocessing tasks, such as:
 

@@ -1,6 +1,6 @@
 """
-IMGO - Compile, process, balance, and augment image data.
----------------------------------------------------------
+IMGO - Process, augment, and balance image data.
+------------------------------------------------
 UPTOOLS module: 
 
 Last updated: version 2.3.1
