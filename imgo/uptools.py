@@ -3,7 +3,7 @@ IMGO - Process, augment, and balance image data.
 ------------------------------------------------
 UPTOOLS module: 
 
-Last updated: version 2.3.1
+Last updated: version 2.3.3
 
 Classes
 -------
@@ -77,7 +77,13 @@ of X (square image data) and y (label data) arrays.
         details: prints or displays summary details about the dataset.
         -
         map_classes: maps class names to label data from new list of 
-        class names.        
+        class names.
+        -
+        normalize: normalizes pixel values to range [0,1].
+        -
+        standardize: standardizes pixel values using the mean and 
+        standard deviation of the training subset (note that the dataset
+        must be split in order to standardize).
         -
         data_split: splits X and y data into training, validation and 
         testing subsets.
@@ -664,7 +670,7 @@ class Image_Dataset:
     base_path (str): path to the directory containing images or class
     subdirectories.
     -
-    mode (str): format of source image data: "img" if raw images, "np" if
+    mode (str): format of source image data: "imgs" if raw images, "np" if
     numpy-arrays, or "h5" if HDF5 format.
     -
     reduce (str): statistical reduction performed on raw data: "norm" for
@@ -729,6 +735,12 @@ class Image_Dataset:
     -
     map_classes: maps class names to label data from new list of class
     names.
+    -
+    normalize: normalizes pixel values to range [0,1].
+    -
+    standardize: standardizes pixel values using the mean and standard
+    deviation of the training subset (note that the dataset must be split
+    in order to standardize).
     -
     data_split: splits X and y data into training, validation and testing
     subsets.
@@ -1312,6 +1324,88 @@ class Image_Dataset:
             raise Exception(
                 f"'class_list' argument must be list, {type(class_list)} given."
             )
+
+    #     ----------
+
+    def normalize(self):
+
+        """
+        Normalizes pixel values to range [0,1].
+        """
+
+        if self.reduce == "norm":
+            raise Exception("Data has already been normalized.")
+        elif self.reduce == "std":
+            raise Exception("Cannot normalize standardized data.")
+        else:
+            subsets = self.shadow
+            print("Normalizing...")
+            for k, v in subsets.items():
+                if v[0] is None:
+                    setattr(self, f"X_{k}", None)
+                else:
+                    setattr(self, f"X_{k}", v[0] / 255)
+                if v[1] is None:
+                    setattr(self, f"y_{k}", None)
+                else:
+                    setattr(self, f"y_{k}", v[1])
+
+            self.min_pv = self.min_pv / 255
+            self.max_pv = self.max_pv / 255
+            self.reduce = "norm"
+            print("Normalization complete.")
+
+    #     ----------
+
+    def standardize(self):
+
+        """
+        Standardizes pixel values using the mean and standard deviation of
+        the training subset (note that the dataset must be split in order
+        to standardize).
+        """
+
+        if self.reduce == "std":
+            raise Exception("Data has already been standardized.")
+        elif self.reduce == "norm":
+            raise Exception("Cannot standardize normalized data.")
+        else:
+            subsets = self.shadow
+
+            if self.dims == "various":
+                raise Exception(
+                    "Cannot standardize data if image dimensions are not the same."
+                )
+            elif self.split == 0:
+                raise Exception("Cannot standardize unsplit data.")
+            else:
+                print("Standardizing...")
+                self.mu = (
+                    np.sum(subsets["train"][0])
+                    / subsets["train"][0].size
+                )
+                self.sigma = np.sqrt(
+                    np.sum((subsets["train"][0] - self.mu) ** 2)
+                    / subsets["train"][0].size
+                )
+                for k, v in subsets.items():
+                    if v[0] is None:
+                        setattr(self, f"X_{k}", None)
+                    else:
+                        setattr(
+                            self,
+                            f"X_{k}",
+                            (v[0] - self.mu) / self.sigma,
+                        )
+                    if v[1] is None:
+                        setattr(self, f"y_{k}", None)
+                    else:
+                        setattr(self, f"y_{k}", v[1])
+
+                self.min_pv = (self.min_pv - self.mu) / self.sigma
+                self.max_pv = (self.max_pv - self.mu) / self.sigma
+                self.reduce = "std"
+                print("Standardization complete.")
 
     #     ----------
 
