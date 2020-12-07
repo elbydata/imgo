@@ -3,7 +3,7 @@ IMGO - Process, augment, and balance image data.
 ------------------------------------------------
 AUGTOOLS module: 
 
-Last updated: version 2.3.3
+Last updated: version 2.3.4
 
 Classes
 -------        
@@ -112,7 +112,10 @@ Augmenter: Class representing an image augmentation system.
         -
         random_augment: randomly apply one or more augmentations to image.
         -
-        display_sample: randomly augment and display image.
+        display: augment and display an input image.
+        -
+        display_sample: augment and display a sample image from a 
+        collection.
         -
         augment_flow: apply augmentation to images located in directories 
         on disk, and save augmented images to disk.
@@ -247,7 +250,9 @@ class Augmenter:
     -
     random_augment: randomly apply one or more augmentations to image.
     -
-    display_sample: randomly augment and display image.
+    display: augment and display an input image.
+    -
+    display_sample: augment and display a sample image from a collection.
     -
     augment_flow: apply augmentation to images located in directories
     on disk, and save augmented images to disk.
@@ -1013,6 +1018,65 @@ class Augmenter:
 
     #     ----------
 
+    def display(
+        self, img, n_rows, n_cols, augment_type=None, order=None
+    ):
+
+        """
+        Applies the Augmenter to an input image according to the
+        parameters given, in order to visualize augmentations.
+
+        Arguments:
+            img (array): image to augment.
+            -
+            n_rows (int): number of rows of augmented images to
+            display.
+            -
+            n_cols (int): number of columns of augmented images to
+            display.
+
+        Keyword Arguments:
+            augment_type (str) optional: either "random" or "simple".
+            If "random", the class' random_augment method will be used
+            for the display. If "simple", the simple_augment method
+            will be used. If None, "random_augment" is used. Defaults to
+            None.
+            -
+            order (list) optional: list of indices (integer type) to
+            determine the order in which the transformation functions are
+            applied. Note that the transformation functions are ordered
+            alphabetically by default. Only relevant if using "simple"
+            as the "augment_type" (see above). Defaults to None.
+
+        Returns:
+            Visualization of augmented image.
+        """
+
+        plt.rcParams["font.family"] = "sans-serif"
+        plt.rcParams["font.sans-serif"] = "Helvetica"
+        plt.rcParams["text.color"] = "#333F4B"
+
+        fig = plt.figure(figsize=(12, 9))
+        ax1 = fig.add_subplot(n_rows, n_cols, 1)
+        ax1.imshow(img)
+        ax1.set_title("Original", fontweight="bold")
+        ax1.set_xticks([])
+        ax1.set_yticks([])
+        for i in tqdm(range(2, (n_rows * n_cols) + 1)):
+            if augment_type == "simple":
+                aug_img = self.simple_augment(img, order=order)
+            else:
+                aug_img = self.random_augment(img)
+            ax = fig.add_subplot(n_rows, n_cols, i)
+            ax.imshow(aug_img)
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+        fig.tight_layout()
+        plt.show()
+
+    #     ----------
+
     def display_sample(
         self,
         source_type,
@@ -1025,10 +1089,10 @@ class Augmenter:
     ):
 
         """
-        Fetches a single image from a collection of images located in
-        a main directory and applies a series of random augmentations
-        according to the parameters given, in order to visualize
-        augmentations prior to running on multiple images.
+        Fetches a sample image from a collection of images located in
+        a main directory or an uptools.Image_Dataset and applies the
+        Augmenter according to the parameters given, in order to
+        visualize augmentations prior to running on multiple images.
 
         Arguments:
             source_type (str): type of the source from which the sample
@@ -1070,7 +1134,7 @@ class Augmenter:
             Only relevant if using "path" mode. Defaults to False.
 
         Returns:
-            Visualization of randomly augmented image.
+            Visualization of augmented image.
         """
 
         if source_type == "path":
