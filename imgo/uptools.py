@@ -3,7 +3,7 @@ IMGO - Process, augment, and balance image data.
 ------------------------------------------------
 UPTOOLS module: 
 
-Last updated: version 2.3.6
+Last updated: version 2.3.7
 
 Classes
 -------
@@ -1009,9 +1009,9 @@ class Image_Dataset:
         x_eqdims = []
         for k, v in combo_sets.items():
             if v[0] is not None:
-                if (len(v[0].shape) == 4) and (
-                    v[0].shape[1] == v[0].shape[2]
-                ):
+                if (
+                    (len(v[0].shape) == 4) or (len(v[0].shape) == 3)
+                ) and (v[0].shape[1] == v[0].shape[2]):
                     x_eqdims.append(v[0].shape[1])
 
         if (len(set(x_eqdims)) == 1) and (
