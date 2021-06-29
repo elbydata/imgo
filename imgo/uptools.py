@@ -3,7 +3,7 @@ IMGO - Process, augment, and balance image data.
 ------------------------------------------------
 UPTOOLS module: 
 
-Last updated: version 2.3.4
+Last updated: version 2.3.6
 
 Classes
 -------
@@ -780,7 +780,7 @@ class Image_Dataset:
             base_path (str): path to the directory containing images or
             class subdirectories.
             -
-            mode (str): format of source image data: "img" if raw images,
+            mode (str): format of source image data: "imgs" if raw images,
             "np" if numpy-arrays, or "h5" if HDF5 format.
             -
             img_scale (int): dimensions for desired (square) output
@@ -1066,24 +1066,36 @@ class Image_Dataset:
                                 ((combo_sets[k][0][i] - img_min) * 255)
                                 / (img_max - img_min)
                             ).astype(np.uint8)
+                            clean_img = np.clip(raw_img, 0, 255).astype(
+                                np.uint8
+                            )
                         elif self.expand == "de_norm":
                             raw_img = (
                                 combo_sets[k][0][i] * 255
                             ).astype(np.uint8)
+                            clean_img = np.clip(raw_img, 0, 255).astype(
+                                np.uint8
+                            )
                         else:
                             raw_img = combo_sets[k][0][i]
+                            clean_img = np.clip(raw_img, 0, 255).astype(
+                                np.uint8
+                            )
                     else:
                         raw_img = combo_sets[k][0][i]
+                        clean_img = np.clip(raw_img, 0, 255).astype(
+                            np.uint8
+                        )
 
                     if self.mode == "imgs":
-                        img = raw_img
+                        img = clean_img
 
                     else:
                         if rescale_dims:
-                            img = auto_rescale(raw_img, rescale_dims)
+                            img = auto_rescale(clean_img, rescale_dims)
                             self.dims = (rescale_dims, rescale_dims)
                         else:
-                            img = raw_img
+                            img = clean_img
 
                     v.append(img)
                     img_min = np.min(img)
