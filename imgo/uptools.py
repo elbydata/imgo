@@ -3,7 +3,7 @@ IMGO - Process, augment, and balance image data.
 ------------------------------------------------
 UPTOOLS module: 
 
-Last updated: version 2.4.0
+Last updated: version 2.4.5
 
 Classes
 -------
@@ -494,6 +494,9 @@ def auto_rescale(img, dim):
             img, scale, interpolation=cv2.INTER_AREA
         )
 
+    if len(scaled_img.shape) == 2:
+        scaled_img = np.expand_dims(scaled_img, 2)
+
     return scaled_img
 
 
@@ -555,6 +558,9 @@ def threshold_rescale(img, lower=None, upper=None):
             scaled_img = img
     else:
         scaled_img = img
+
+    if len(scaled_img.shape) == 2:
+        scaled_img = np.expand_dims(scaled_img, 2)
 
     return scaled_img
 
@@ -1953,12 +1959,11 @@ class Image_Dataset:
 
         Returns:
             X_train_aug (numpy-array): the Image_Dataset's X_train object
-            with augmented images (if inplace argument set to False).
+            with augmented images added.
 
         Yields:
-            Augmented images (in numpy-array form) as the 'X_train'
-            attribute of the Image_Dataset object (if inplace argument
-            set to True).
+            Augmented images (in numpy-array form) added to the 'X_train'
+            attribute of the Image_Dataset object.
         """
 
         from imgo import augtools
@@ -1969,26 +1974,28 @@ class Image_Dataset:
         else:
 
             if (portion >= 0) and (portion <= 1):
-                n = np.round(self.X_train.shape[0] * (portion)).astype(
-                    np.uint8
-                )
+                n = int(np.round(self.X_train.shape[0] * (portion)))
                 img_indices = np.random.choice(
-                    self.X_train.shape[0],
-                    np.min([self.X_train.shape[0], n]),
-                    replace=False,
+                    self.X_train.shape[0], n, replace=False
                 )
             else:
                 raise Exception(
                     "Portion argument must be in range [0,1]."
                 )
 
-            X_train_aug = []
-            for x in tqdm(np.arange(self.shadow["train"][0].shape[0])):
+            X_aug_list = []
+            y_aug_list = []
+
+            for x in tqdm(
+                np.arange(self.shadow["train"][0].shape[0]), position=0
+            ):
                 if x in img_indices:
+
+                    img = self.shadow["train"][0][x]
+                    label = self.shadow["train"][1][x]
+
                     if augment_scale:
-                        scaled_img = auto_rescale(
-                            self.shadow["train"][0][x], augment_scale
-                        )
+                        scaled_img = auto_rescale(img, augment_scale)
                         if augment_type == "simple":
                             aug_scaled_img = augmenter.simple_augment(
                                 scaled_img, order=order
@@ -2003,17 +2010,32 @@ class Image_Dataset:
                     else:
                         if augment_type == "simple":
                             aug_img = augmenter.simple_augment(
-                                self.shadow["train"][0][x], order=order
+                                img, order=order
                             )
                         else:
                             aug_img = augmenter.random_augment(
                                 self.shadow["train"][0][x]
                             )
-                    X_train_aug.append(aug_img)
-                else:
-                    X_train_aug.append(self.shadow["train"][0][x])
 
-            self.shadow["train"][0] = np.array(X_train_aug)
+                    X_aug_list.append(aug_img)
+                    y_aug_list.append(label)
+
+            X_train_aug = np.array(X_aug_list)
+            y_train_aug = np.array(y_aug_list)
+
+            full_X = np.concatenate(
+                (self.shadow["train"][0], X_train_aug), axis=0
+            )
+            full_y = np.concatenate(
+                (self.shadow["train"][1], y_train_aug), axis=0
+            )
+
+            shuffle_indices = np.random.choice(
+                full_X.shape[0], full_X.shape[0], replace=False
+            )
+
+            self.shadow["train"][0] = full_X[shuffle_indices]
+            self.shadow["train"][1] = full_y[shuffle_indices]
 
             if self.reduce == "std":
                 if self.dims == "various":
