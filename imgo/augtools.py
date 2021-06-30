@@ -3,7 +3,7 @@ IMGO - Process, augment, and balance image data.
 ------------------------------------------------
 AUGTOOLS module: 
 
-Last updated: version 2.3.8
+Last updated: version 2.4.0
 
 Classes
 -------        
@@ -1058,7 +1058,10 @@ class Augmenter:
 
         fig = plt.figure(figsize=(12, 9))
         ax1 = fig.add_subplot(n_rows, n_cols, 1)
-        ax1.imshow(img)
+        if img.shape[2] == 1:
+            ax1.imshow(np.squeeze(img, 2))
+        else:
+            ax1.imshow(img)
         ax1.set_title("Original", fontweight="bold")
         ax1.set_xticks([])
         ax1.set_yticks([])
@@ -1068,7 +1071,10 @@ class Augmenter:
             else:
                 aug_img = self.random_augment(img)
             ax = fig.add_subplot(n_rows, n_cols, i)
-            ax.imshow(aug_img)
+            if aug_img.shape[2] == 1:
+                ax.imshow(np.squeeze(aug_img, 2))
+            else:
+                ax.imshow(aug_img)
             ax.set_xticks([])
             ax.set_yticks([])
 
@@ -1167,7 +1173,10 @@ class Augmenter:
 
         fig = plt.figure(figsize=(12, 9))
         ax1 = fig.add_subplot(n_rows, n_cols, 1)
-        ax1.imshow(img)
+        if img.shape[2] == 1:
+            ax1.imshow(np.squeeze(img, 2))
+        else:
+            ax1.imshow(img)
         ax1.set_title("Original", fontweight="bold")
         ax1.set_xticks([])
         ax1.set_yticks([])
@@ -1177,7 +1186,10 @@ class Augmenter:
             else:
                 aug_img = self.random_augment(img)
             ax = fig.add_subplot(n_rows, n_cols, i)
-            ax.imshow(aug_img)
+            if aug_img.shape[2] == 1:
+                ax.imshow(np.squeeze(aug_img, 2))
+            else:
+                ax.imshow(aug_img)
             ax.set_xticks([])
             ax.set_yticks([])
 

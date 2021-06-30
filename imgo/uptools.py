@@ -3,7 +3,7 @@ IMGO - Process, augment, and balance image data.
 ------------------------------------------------
 UPTOOLS module: 
 
-Last updated: version 2.3.8
+Last updated: version 2.4.0
 
 Classes
 -------
@@ -1119,6 +1119,11 @@ class Image_Dataset:
                     print(f"Compiling {k} data...")
                 combo_sets[k][0] = np.array(v)
 
+        for k, v in combo_sets.items():
+            if v[0] is not None:
+                if len(v[0].shape) == 3:
+                    v[0] = np.expand_dims(v[0], 3)
+
         self.shadow = combo_sets
 
         if self.reduce == "std":
@@ -1789,7 +1794,10 @@ class Image_Dataset:
             for k, v in self.shadow.items():
                 if v[1] is not None:
                     for i in np.arange(v[1].shape[0]):
-                        img = v[0][i]
+                        if v[0][i].shape[2] == 1:
+                            img = np.squeeze(v[0][i], 2)
+                        else:
+                            img = v[0][i]
                         label_index = np.argmax(v[1][i], axis=0)
                         label = self.class_list[label_index]
                         if self.split == 0:
