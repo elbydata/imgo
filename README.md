@@ -2,7 +2,7 @@
 
 ## Process, Augment, and Balance Image Data
 
-This library is designed to facilitate the preprocessing phase of image classification projects. 
+This library is designed to facilitate the preprocessing phase of image classification projects in order to get into the fun part: training the models!
 
 ### Features:
 

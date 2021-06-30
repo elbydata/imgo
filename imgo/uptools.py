@@ -3,7 +3,7 @@ IMGO - Process, augment, and balance image data.
 ------------------------------------------------
 UPTOOLS module: 
 
-Last updated: version 2.3.7
+Last updated: version 2.3.8
 
 Classes
 -------
@@ -1479,7 +1479,7 @@ class Image_Dataset:
                                 self.shadow["data"][0],
                                 self.shadow["data"][1],
                                 test_size=round(
-                                    split_ratio[1] + split_ratio[2], 1
+                                    split_ratio[1] + split_ratio[2], 2
                                 ),
                                 stratify=self.shadow["data"][1],
                                 random_state=seed,
@@ -1494,7 +1494,7 @@ class Image_Dataset:
                                 ytv,
                                 test_size=split_ratio[2]
                                 / round(
-                                    split_ratio[1] + split_ratio[2], 1
+                                    split_ratio[1] + split_ratio[2], 2
                                 ),
                                 stratify=ytv,
                                 random_state=seed,
@@ -1509,7 +1509,7 @@ class Image_Dataset:
                                 self.shadow["data"][0],
                                 self.shadow["data"][1],
                                 test_size=round(
-                                    split_ratio[1] + split_ratio[2], 1
+                                    split_ratio[1] + split_ratio[2], 2
                                 ),
                                 random_state=seed,
                             )
@@ -1523,7 +1523,7 @@ class Image_Dataset:
                                 ytv,
                                 test_size=split_ratio[2]
                                 / round(
-                                    split_ratio[1] + split_ratio[2], 1
+                                    split_ratio[1] + split_ratio[2], 2
                                 ),
                                 random_state=seed,
                             )
