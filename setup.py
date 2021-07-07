@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="imgo",
-    version="2.4.5",
+    version="2.5.3",
     author="Elby Data",
     author_email="info@elbydata.com",
     description="Image data processing and augmentation tools",

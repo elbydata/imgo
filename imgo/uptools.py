@@ -3,7 +3,7 @@ IMGO - Process, augment, and balance image data.
 ------------------------------------------------
 UPTOOLS module: 
 
-Last updated: version 2.4.5
+Last updated: version 2.5.3
 
 Classes
 -------
@@ -32,6 +32,9 @@ of X (square image data) and y (label data) arrays.
         -
         dims (tuple): dimensions of the images in the dataset (set to 
         "various" (str) if the images are not of a consistent size).
+        -
+        img_shape (tuple): dimensions and channels of the images in the
+        dataset.
         -
         expand (str): statistical expansion performed on raw data:
         "de_norm" for de-normalization of pixel values, and "de_std" for 
@@ -648,6 +651,9 @@ def rescale_flow(
         else:
             scaled_img = img
 
+        if len(scaled_img.shape) == 2:
+            scaled_img = np.expand_dims(scaled_img, 2)
+
         if save:
             imageio.imwrite(j[0], scaled_img)
         else:
@@ -694,6 +700,9 @@ class Image_Dataset:
     -
     dims (tuple): dimensions of the images in the dataset (set to
     "various" (str) if the images are not of a consistent size).
+    -
+    img_shape (tuple): dimensions and channels of the images in the
+    dataset.
     -
     expand (str): statistical expansion performed on raw data: "de_norm"
     for de-normalization of pixel values, and "de_std" for
@@ -765,6 +774,11 @@ class Image_Dataset:
     augment_training_set: calls on an (initialized) imgo.augtools
     augmenter to apply image augmentation to the Image_Dataset's X_train
     subset.
+    -
+    split_rebalance: splits dataset into training and testing
+    (and validation) subsets and rebalances class sizes by calling on
+    an (initialized) imgo.augtools augmenter to generate new training
+    images (without affecting the validation/testing subsets).
     """
 
     def __init__(
@@ -1130,6 +1144,18 @@ class Image_Dataset:
                 if len(v[0].shape) == 3:
                     v[0] = np.expand_dims(v[0], 3)
 
+        channels = []
+        for k, v in combo_sets.items():
+            if v[0] is not None:
+                channels.append(v[0].shape[-1])
+        if len(set(channels)) != 1:
+            raise Exception(
+                "Cannot create ImageDataset with inconsistent number of channels."
+            )
+        channels = list(set(channels))[0]
+
+        self.img_shape = (self.dims[0], self.dims[1], channels)
+
         self.shadow = combo_sets
 
         if self.reduce == "std":
@@ -1268,7 +1294,7 @@ class Image_Dataset:
             "total_images": self.size,
             "splits": splits,
             "images_per_class": imgs_per_class,
-            "image_size": self.dims,
+            "image_shape": self.img_shape,
             "pixel_values": val_ranges,
         }
 
@@ -1320,8 +1346,25 @@ class Image_Dataset:
 
             print("Image_Dataset details")
             print("---------------------")
-            for k, v in ds_dict.items():
+            for k, v in {
+                i: ds_dict[i]
+                for i in ds_dict
+                if i != "images_per_class"
+            }.items():
+                print(f"{k:<20}{v}\n---")
+            print("images_per_class\n-")
+            for k, v in ds_dict["images_per_class"].items():
                 print(f"{k:<20}{v}\n-")
+            if self.split != 0:
+                totals = {}
+                for c in self.class_list:
+                    c_total = []
+                    for k, v in ds_dict["images_per_class"].items():
+                        c_total.append(
+                            ds_dict["images_per_class"][k][c]
+                        )
+                        totals[c] = sum(c_total)
+                print(f"{'totals':<20}{totals}")
 
     #     ----------
 
@@ -2036,6 +2079,7 @@ class Image_Dataset:
 
             self.shadow["train"][0] = full_X[shuffle_indices]
             self.shadow["train"][1] = full_y[shuffle_indices]
+            self.y_train = self.shadow["train"][1]
 
             if self.reduce == "std":
                 if self.dims == "various":
@@ -2076,6 +2120,19 @@ class Image_Dataset:
 
             else:
                 self.X_train = self.shadow["train"][0]
+
+            self.y_train = self.shadow["train"][1]
+
+            if self.split == 1:
+                print("Training data sucessfully augmented.")
+                self.size = self.y_train.shape[0] + self.y_test.shape[0]
+            elif self.split == 2:
+                print("Training data sucessfully augmented.")
+                self.size = (
+                    self.y_train.shape[0]
+                    + self.y_val.shape[0]
+                    + self.y_test.shape[0]
+                )
 
     #     ----------
 

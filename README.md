@@ -53,6 +53,10 @@ Please see the `requirements.txt` file for all requirements and dependencies.
 The source code is available [here](https://github.com/elbydata/imgo/tree/master/imgo).
 Please direct any queries or issues to info@elbydata.com.
 
+### Issues / To do
+
+Some functions currently employ ragged arrays which are deprecated in the latest versions of NumPy. This affects all functions that work with non-standard or inconsistent image dimensions.
+
 ### License
 
 The project is licensed under the MIT license.
