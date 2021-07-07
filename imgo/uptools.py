@@ -3,7 +3,7 @@ IMGO - Process, augment, and balance image data.
 ------------------------------------------------
 UPTOOLS module: 
 
-Last updated: version 2.5.3
+Last updated: version 2.5.4
 
 Classes
 -------
@@ -1133,10 +1133,6 @@ class Image_Dataset:
                         if img_max > max_pv:
                             max_pv = img_max
 
-                if k == "data":
-                    print("Compiling datasets...")
-                else:
-                    print(f"Compiling {k} data...")
                 combo_sets[k][0] = np.array(v)
 
         for k, v in combo_sets.items():
