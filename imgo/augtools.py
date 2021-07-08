@@ -1,9 +1,7 @@
 """
 IMGO - Process, augment, and balance image data.
 ------------------------------------------------
-AUGTOOLS module: 
-
-Last updated: version 2.5.4
+AUGTOOLS module
 
 Classes
 -------        

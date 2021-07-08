@@ -1,9 +1,7 @@
 """
 IMGO - Process, augment, and balance image data.
 ------------------------------------------------
-UPTOOLS module: 
-
-Last updated: version 2.5.4
+UPTOOLS module
 
 Classes
 -------
@@ -1333,8 +1331,6 @@ class Image_Dataset:
                 ax.legend(bbox_to_anchor=(1, 0.5))
             ax.spines["top"].set_color("none")
             ax.spines["right"].set_color("none")
-            ax.spines["left"].set_smart_bounds(True)
-            ax.spines["bottom"].set_smart_bounds(True)
 
             plt.show()
 
